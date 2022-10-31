@@ -1,4 +1,4 @@
-# Consumer-driven contract testing using state machines
+# Integration tests against state machine fakes and consumer-driven contract tests for the fakes
 
 ## Motivation
 
@@ -50,7 +50,7 @@ Yes! It’s quite simple, merely create a wrapper around the state machine model
 
 ![](../images/part3-sm-model-fake-small.jpg)
 
-## “Collaboration tests” vs contract tests
+## Integration tests vs contract tests
 
 Let’s zoom out a bit and contemplate the general picture. Our queue can be thought of as a producer of the interface, while the web service is consumer of it.
 
@@ -60,8 +60,8 @@ Let’s zoom out a bit and contemplate the general picture. Our queue can be tho
                        |
            ----------> x-------->
                        |
-      "Collaboration   |  Contract tests
-          tests"       |
+       Integration     |  Contract tests
+          tests        |
 
 When we integration test our web service against the fake queue we are doing, what is sometimes called, “collaboration tests”, while when we are ensuring that the fake queue is faithful to the real queue we are doing contract tests.
 
@@ -135,7 +135,7 @@ Why not just spin up the real component B when testing component A?
 
 2.  Write contract tests that ensure that the fake database faithfully represents the real one.
 
-3.  Once the contract tests pass, switch out the real database for the fake one in the collaboration tests (the test-suite of the web service). Enable timing output in `ghci` with `:set +s`, crank up the number of tests that `QuickCheck` generates, and see if you notice any speed up in the test execution time.
+3.  Once the contract tests pass, switch out the real database for the fake one in the integration tests (the test-suite of the web service). Enable timing output in `ghci` with `:set +s`, crank up the number of tests that `QuickCheck` generates, and see if you notice any speed up in the test execution time.
 
 4.  Think of corner cases for the queue you’d write unit tests for, but instead add those cases to the coverage checker to ensure that the generator generates them.
 

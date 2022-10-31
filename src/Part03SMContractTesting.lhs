@@ -1,5 +1,5 @@
-Consumer-driven contract testing using state machines
-=====================================================
+Integration tests against state machine fakes and consumer-driven contract tests for the fakes
+==============================================================================================
 
 Motivation
 ----------
@@ -86,8 +86,8 @@ outputs -- that's what the wrapper fixes.)
 
 ![](../images/part3-sm-model-fake-small.jpg)
 
-"Collaboration tests" vs contract tests
----------------------------------------
+Integration tests vs contract tests
+-----------------------------------
 
 Let's zoom out a bit and contemplate the general picture. Our queue can be
 thought of as a producer of the interface, while the web service is consumer of
@@ -100,8 +100,8 @@ it.
                    |
        ----------> x-------->
                    |
-  "Collaboration   |  Contract tests
-      tests"       |
+   Integration     |  Contract tests
+      tests        |
 
 ```
 
@@ -216,7 +216,7 @@ Exercises
    the real one.
 
 3. Once the contract tests pass, switch out the real database for the fake one
-   in the collaboration tests (the test-suite of the web service). Enable timing
+   in the integration tests (the test-suite of the web service). Enable timing
    output in `ghci` with `:set +s`, crank up the number of tests that
    `QuickCheck` generates, and see if you notice any speed up in the test
    execution time.

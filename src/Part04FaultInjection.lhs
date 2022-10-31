@@ -632,7 +632,7 @@ See also
 --------
 
 - [*Why Is Random Testing Effective for Partition Tolerance
-  Bugs?*(https://dl.acm.org/doi/pdf/10.1145/3158134) by Majumdar and Niksic
+  Bugs?*](https://dl.acm.org/doi/pdf/10.1145/3158134) by Majumdar and Niksic
   (2018)
 
 - The [`failpoint`](https://github.com/pingcap/failpoint) Go library allows us
