@@ -35,38 +35,51 @@ Plan
 How it works
 ------------
 
-  + What interface does the event loop provide?
-    - Send/recv messages
-    - Timers
-    - File I/O
-  + Implement this interface twice:
-    1. Real implementation
-    2. Simulation, where outgoing messages are intercepted and scheduled at
-       random but deterministically using a seed (or dropped to simulate e.g.
-       network partitions)
+- Given that all the fakes our components are state machines of type `Input ->
+  State -> (State, Output)`, we can "glue" them together to form a network of
+  components where the outputs of one component gets fed into the input of
+  another and so on. This is particularly effective for distributed systems
+  where we have N instances of the same component and they typically all talk to
+  each other;
 
-![simulation event loop](../images/simulation-eventloop.svg)
+- Further note that since the networking part is already factored out of our
+  state machines, all we need to do is to write an event loop which does the
+  actual receiving and responding of messages and feeds it to the state
+  machines. The picture looks something like this:
 
-The following pseudo code implementation of the event loop works for both the
-"real" deployment and simulation:
+  ![simulation event loop](../images/simulation-eventloop.svg)
 
-```
-while true {
-  msg := deliver()
-  out := recv(msg)
-  send(out)
-}
-```
+  where client requests (synchronously) and internal messages from other nodes
+  in the network (potentially asynchronously) arrive at the event loop, get
+  queued up and then dispatched to the state machine running on the event loop.
+  After processing a message (the green arrow) the event loop updates the state
+  of the state machine and sends out any replies.
 
-by switching out the implementation of `send` from sending messages over the
-network to merely adding the message to priority queue, and switching out the
-implementation of `deliever` from listning on a socket to merely popping
-messages off the priority queue, then we can switch between a "real" deployment
-and simulation by merely switching between different implementations of the
-event loops interface (`send` and `deliver`).
+- In order to reuse as much code as possible between real production deployment
+  and simulation testing we can parametrise the event loop by an interface that
+  does the delivering and sending of the network messages (the blue boxes in the
+  diagram), and merely swap those out depending on which mode of deployment we
+  want.
 
-- Inspiration for faults: https://en.wikipedia.org/wiki/Fallacies_of_distributed_computing
+  For the real deployment send and deliver actually use the network to send and
+  deliver messages to clients or other nodes in the network, while in the
+  simulation testing deployment send generates a random (but deterministic via a
+  seed) arrival time and inserts the message in a priority queue sorted by time,
+  deliver pops the priority queue and steps the appropriate state machine with
+  the next message and inserts all the replies back to the queue, rinse and
+  repeat. Another difference between the real and simulation testing deployment
+  is that in the real case we want to run one node per event loop, while in
+  simulation we can run a whole network of nodes on one event loop.
 
+- Injecting faults can be done on the event loop level while simulation testing,
+  e.g. dropping random messages from the priority queue or introducing latency
+  by generating arrival times with a greater variance.
+
+- During simulation testing the time is advanced upon delivering a message, e.g.
+  if an incoming message has arrival time T then we first advance the time of
+  the state machine to T and then feed it the message, by advancing the time we
+  might trigger various timeout and retries without actually having to wait 30s
+  (or whenever).
 
 Code
 ----
@@ -80,9 +93,9 @@ Discussion
 - Risk of simulation being wrong?
 
   + Assumption: each message is processed atomically, a more fine-grained
-  approach where each state machine has a "program counter" that gets
-  incremented is imaginable, but will introduce a lot more complexity and many
-  further states.
+    approach where each state machine has a "program counter" that gets
+    incremented is imaginable, but will introduce a lot more complexity and many
+    further states.
 
   + See relevant part of Will Wilson's [talk](https://youtu.be/4fFDFbi3toc?t=2164)
 
@@ -112,6 +125,8 @@ See also
 - The [P](https://github.com/p-org/P) programming language;
 - [Maelstrom](https://github.com/jepsen-io/maelstrom);
 - [stateright](https://github.com/stateright/stateright).
+
+- Inspiration for faults: https://en.wikipedia.org/wiki/Fallacies_of_distributed_computing
 
 - Where do these ideas come from?
 
@@ -265,6 +280,6 @@ The simulation code is open source and can be found
 Summary
 -------
 
-By moving all our non-determinism behind interfaces and providing a determinstic
-fake for them (in addition to the real implementation that is non-determinstic)
-we can achieve fast and determinstic end-to-end tests for distributed systems.
+By moving all our non-determinism behind interfaces and providing a deterministic
+fake for them (in addition to the real implementation that is non-deterministic)
+we can achieve fast and deterministic end-to-end tests for distributed systems.
