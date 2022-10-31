@@ -618,7 +618,7 @@ unit_concIntegrationTests = do
 
 ## See also
 
--   \[*Why Is Random Testing Effective for Partition Tolerance Bugs?*(https://dl.acm.org/doi/pdf/10.1145/3158134) by Majumdar and Niksic
+-   [*Why Is Random Testing Effective for Partition Tolerance Bugs?*](https://dl.acm.org/doi/pdf/10.1145/3158134) by Majumdar and Niksic
     2018) 
 -   The [`failpoint`](https://github.com/pingcap/failpoint) Go library allows us to insert failures at any point in our code, in some way this is a cheap-and-dirty way of achiving the same thing as we’ve done in this part. Cheap because it’s less work, dirty because it litters the (production) code with fail points (our fail points are hidden in the fake).
 

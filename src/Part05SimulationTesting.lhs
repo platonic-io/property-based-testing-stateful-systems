@@ -1,24 +1,39 @@
-> module Part05SimulationTesting () where
-
-> import Part05.EventLoop ()
-
 Simulation testing
 ==================
 
 Motivation
 ----------
 
-  - "haven't tested foundation[db] in part because their testing appears to be
-    waaaay more rigorous than mine." -- Kyle
-    ["aphyr"](https://twitter.com/aphyr/status/405017101804396546) Kingsbury
+- "haven't tested foundation[db] in part because their testing appears to be
+  waaaay more rigorous than mine." -- Kyle
+  ["aphyr"](https://twitter.com/aphyr/status/405017101804396546) Kingsbury
 
-  - ["Jepsen-proof engineering"](https://sled.rs/simulation.html)
+- ["Jepsen-proof engineering"](https://sled.rs/simulation.html)
 
-  - "Everyone knows that debugging is twice as hard as writing a program in the
-    first place." -- Brian Kernighan
+- "Everyone knows that debugging is twice as hard as writing a program in the
+  first place." -- Brian Kernighan
 
 Plan
 ----
+
+- Treat networking and time as "dependencies", but them behind interfaces and
+  implement a fake for them (similar to how we did in [part
+  3](./Part03SMContractTesting.md));
+
+- Simulate a network of components by connecting the fakes and let them
+  communicate with each other;
+
+- The fake time is advanced discretely based on when messages arrive rather with
+  a real clock, that way we don't have to wait for timeouts to happen;
+
+- Collect a concurrent history from the client request perspective and check if it
+  linerises (like in [part 2](./Part02ConcurrentSMTesting.md));
+
+- Write a time-travelling debugger that lets us step through the history of
+  messages and view how the state of each state machine evolves over time.
+
+How it works
+------------
 
   + What interface does the event loop provide?
     - Send/recv messages
@@ -53,6 +68,27 @@ event loops interface (`send` and `deliver`).
 - Inspiration for faults: https://en.wikipedia.org/wiki/Fallacies_of_distributed_computing
 
 
+Code
+----
+
+> module Part05SimulationTesting () where
+> import Part05.EventLoop ()
+
+Discussion
+----------
+
+- Risk of simulation being wrong?
+
+  + Assumption: each message is processed atomically, a more fine-grained
+  approach where each state machine has a "program counter" that gets
+  incremented is imaginable, but will introduce a lot more complexity and many
+  further states.
+
+  + See relevant part of Will Wilson's [talk](https://youtu.be/4fFDFbi3toc?t=2164)
+
+- State space explosion problem, natural numbers analogy, Kleppmann's
+  [work](https://lawrencecpaulson.github.io/2022/10/12/verifying-distributed-systems-isabelle.html)
+
 Exercises
 ---------
 
@@ -64,12 +100,18 @@ Exercises
 3. Write a checker that works on histories that ensures that the safety
    properites from section 8 on correctness from [*Viewstamped Replication
    Revisited*](https://pmg.csail.mit.edu/papers/vr-revisited.pdf) by Barbara
-   Liskov and James Cowling (2012)
-- https://making.pusher.com/fuzz-testing-distributed-systems-with-quickcheck/
-- https://fractalscapeblog.wordpress.com/2017/05/05/quickcheck-for-paxos/
+   Liskov and James Cowling (2012);
+
+4. Compare and contrast with prior work:
+  - https://making.pusher.com/fuzz-testing-distributed-systems-with-quickcheck/
+  - https://fractalscapeblog.wordpress.com/2017/05/05/quickcheck-for-paxos/
 
 See also
 --------
+
+- The [P](https://github.com/p-org/P) programming language;
+- [Maelstrom](https://github.com/jepsen-io/maelstrom);
+- [stateright](https://github.com/stateright/stateright).
 
 - Where do these ideas come from?
 
@@ -219,3 +261,10 @@ Methods in Large-Scale Functional Programming" (2020):
 
 The simulation code is open source and can be found
 [here](https://github.com/input-output-hk/ouroboros-network/tree/master/io-sim).
+
+Summary
+-------
+
+By moving all our non-determinism behind interfaces and providing a determinstic
+fake for them (in addition to the real implementation that is non-determinstic)
+we can achieve fast and determinstic end-to-end tests for distributed systems.
