@@ -410,10 +410,10 @@ See also
   importance of thinking about unit-test edge caseses and ensuring they are
   covered by the generators when doing property-based testing;
 
-- Lamport's [Computation and State
-  Machines](https://www.microsoft.com/en-us/research/publication/computation-state-machines/)
-  (2008) is an argument from a mathematical point of view why state machines are
-  central in program correctness;
+- Leslie Lamport's *Computation and State Machines*
+  [paper](https://www.microsoft.com/en-us/research/publication/computation-state-machines/) (2008)
+  presents an argument from a mathematical point of view why state machines are
+  central to program correctness;
 
 - "Can one generalize Turing machines so that any algorithm, never mind how ab-
   stract, can be modeled by a generalized machine very closely and faithfully?"

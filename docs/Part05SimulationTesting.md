@@ -136,7 +136,9 @@ import Part05.EventLoop ()
 
 -   Related to the above, and already touched upon in part 4: how can we effectively inject faults? Is random good enough or can we be more smart about it? C.f. [lineage-driven fault injection](https://dl.acm.org/doi/10.1145/2723372.2723711) by Alvaro et al (2015);
 
--   Can we package up this type of testing in a library suitable for a big class of (distributed) systems? Perhaps in a language agnostic way? So far it seems that all simulation testing practitioners are implementing their own custom solutions.
+-   Can we package up this type of testing in a library suitable for a big class of (distributed) systems? Perhaps in a language agnostic way? So far it seems that all simulation testing practitioners are implementing their own custom solutions;
+
+-   Can we make the event loop performant while keeping the test- and debuggability that we get from determinism and command sourcing? Perhaps borrowing ideas form LMAX’s [disruptor](https://github.com/symbiont-io/hs-disruptor/), [io_uring](https://lwn.net/Articles/776703/), and [zero-copy](https://en.wikipedia.org/wiki/Zero-copy) techniques?
 
 ## See also
 
