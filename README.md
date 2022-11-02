@@ -1,6 +1,10 @@
 Property-based testing stateful systems: a medium-sized tutorial
 ================================================================
 
+[![GitHub
+CI](https://github.com/symbiont-io/property-based-testing-stateful-systems/workflows/CI/badge.svg)](https://github.com/symbiont-io/property-based-testing-stateful-systems/actions)
+[![Hackage](https://img.shields.io/hackage/v/property-based-testing-stateful-systems.svg)](https://hackage.haskell.org/package/property-based-testing-stateful-systems)
+
 Property-based testing (PBT), i.e. generating random inputs and checking some
 property of the output, of pure programs is an established practice by now. It's
 taught in introductory university classes and it's part of test suites in
