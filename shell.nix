@@ -8,6 +8,7 @@ in
 
   mkShell rec {
     buildInputs = [
+      act
       cabal-install
       haskell.compiler.ghc902
       haskellPackages.cabal-fmt

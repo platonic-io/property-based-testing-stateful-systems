@@ -77,21 +77,24 @@ main = do
   queue <- case args of
              ["--testing"] -> fakeQueue mAX_QUEUE_SIZE
              _otherwise    -> realQueue mAX_QUEUE_SIZE
-  service queue
+  service sQLITE_DB_PATH queue
 
 -- The web service is written against the queue interface, it doesn't care which
 -- implementation of it we pass it.
 
-service :: QueueI Command -> IO ()
-service queue = do
-  bracket initDB closeDB $ \conn ->
+service :: FilePath -> QueueI Command -> IO ()
+service sqliteDbPath queue = do
+  bracket (initDB sqliteDbPath) closeDB $ \conn ->
     withAsync (worker queue conn) $ \_a -> do
       _ready <- newEmptyMVar
       runFrontEnd queue _ready pORT
 
 withService :: QueueI Command -> IO () -> IO ()
-withService queue io = do
-  bracket initDB closeDB $ \conn ->
+withService = withService' sQLITE_DB_PATH
+
+withService' :: FilePath -> QueueI Command -> IO () -> IO ()
+withService' sqliteDbPath queue io = do
+  bracket (initDB sqliteDbPath) closeDB $ \conn ->
     withAsync (worker queue conn) $ \wPid -> do
       link wPid
       ready <- newEmptyMVar
@@ -208,16 +211,16 @@ sQLITE_DB_PATH = "/tmp/part3_webservice.sqlite3"
 sQLITE_FLAGS :: [String]
 sQLITE_FLAGS = ["fullfsync=1", "journal_mode=WAL", "synchronous=NORMAL"]
 
-sqlitePath :: String
-sqlitePath =
+sqlitePath :: FilePath -> String
+sqlitePath fp =
   let
     flags = map (++ ";") sQLITE_FLAGS
   in
-    sQLITE_DB_PATH ++ "?" ++ concat flags
+    fp ++ "?" ++ concat flags
 
-initDB :: IO Connection
-initDB = do
-  conn <- open sqlitePath
+initDB :: FilePath -> IO Connection
+initDB fp = do
+  conn <- open (sqlitePath fp)
   let flags = map (++ ";") sQLITE_FLAGS
   forM_ flags $ \flag -> do
     execute_ conn ("PRAGMA " <> fromString flag)
