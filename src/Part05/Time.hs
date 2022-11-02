@@ -24,7 +24,7 @@ addTimeMicros micros (Time t) = Time (addUTCTime (realToFrac micros * 0.000001) 
 
 diffTimeMicros :: Time -> Time -> Int
 diffTimeMicros (Time t0) (Time t1) =
-  round (realToFrac (fromEnum (diffUTCTime t0 t1)) * 0.000001)
+  round (realToFrac (fromEnum (diffUTCTime t0 t1)) * 0.000001 :: Double)
   -- The `NominalTimeDiff` we get from `diffUTCTime` has a precision of one
   -- picosecond (= 10^-12 s), and according to the documentation " Enumeration
   -- functions will treat it as picoseconds.", so hence the `fromEnum` and `*

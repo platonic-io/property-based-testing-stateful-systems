@@ -4,5 +4,5 @@ import qualified Part04FaultInjection as Part04
 
 ------------------------------------------------------------------------
 
-unit_faultTest :: IO ()
-unit_faultTest = Part04.unit_faultTest
+unit_part04SeqIntegrationTests :: IO ()
+unit_part04SeqIntegrationTests = Part04.unit_seqIntegrationTests
