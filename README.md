@@ -1,4 +1,4 @@
-Property-based testing stateful systems: a medium-sized tutorial
+Property-based testing stateful systems: a tutorial
 ================================================================
 
 [![GitHub
@@ -26,16 +26,19 @@ that gap and try to make PBT stateful systems more common.
 The goals we'd like to achieve are:
 
   - Show how to test stateful (i.e. impure/monadic) programs using
-    property-based testing in general;
+    property-based testing;
 
-  - Show how to use fault injection and so called simulation testing to test
-    distributed systems in particular;
+  - Show how we can do concurrent testing to help uncover problems such as race
+    conditions;
 
-  - Introduce the reader to related work and open problems in the area.
+  - Show how we can build bigger systems in a modular way by applying the
+    property-based testing equivalent of integration and contract tests;
 
-Another way to summarise the goals is: if you think of PBT pure programs as in
-some sense generating unit tests, then we'd like to show how you can generate
-fast and deterministic integration and end-to-end tests.
+  - Show how to use fault injection and so called simulation testing to
+    "end-to-end" test distributed systems;
+
+  - Introduce the reader to related work and open problems in the area along the
+    way.
 
 In the interest of brevity, we assume that the reader already has:
 
@@ -54,13 +57,13 @@ In the interest of brevity, we assume that the reader already has:
     machines](https://en.wikipedia.org/wiki/Moore_machine) and
     [transducers](https://en.wikipedia.org/wiki/Finite-state_transducer)).
 
-Other than that this resource is striving to be as self-contained as possibly as
+Other than that this tutorial is striving to be as self-contained as possibly as
 well as accessible to non-Haskell programmers.
 
 Structure
 ---------
 
-The resource is split up into five parts (so far), and each part has the
+The tutorial is split up into five parts (so far), and each part has the
 following structure:
 
 - Motivation: explains why we are doing what we are about to do;
