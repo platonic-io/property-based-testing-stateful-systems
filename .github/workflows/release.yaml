@@ -27,14 +27,6 @@ jobs:
           draft: true
           prerelease: false
 
-      - name: Output release URL file
-        run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
-      - name: Save release URL file for publish
-        uses: actions/upload-artifact@v3
-        with:
-          name: release_url
-          path: release_url.txt
-
   build_artifact:
     needs: [create_release]
     name: ${{ matrix.os }}/GHC ${{ matrix.ghc }}/${{ github.ref }}
