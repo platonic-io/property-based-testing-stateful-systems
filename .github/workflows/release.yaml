@@ -77,11 +77,6 @@ jobs:
       - name: Set binary path name
         run: echo "BINARY_PATH=./dist/part5" >> $GITHUB_ENV
 
-      - name: Compress binary
-        uses: svenstaro/upx-action@2.0.1
-        with:
-          file: ${{ env.BINARY_PATH }}
-
       - name: Load release URL file from release job
         uses: actions/download-artifact@v3
         with:
