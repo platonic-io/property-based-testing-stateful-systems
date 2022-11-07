@@ -2,17 +2,30 @@
 
 ## Recap: property-based testing
 
+Before we get into how to apply property-based testing (PBT) to stateful systems, lets recall what PBT of pure programs looks like. Here are a few typical examples:
+
 -   `forall (xs: List Int). reverse (reverse xs) == xs`
 -   `forall (i : Input). deserialise (serialise i) == i`
 -   `forall (i j k : Int). (i + j) + k == i + (j + k)`
 
+The idea is that we quantify over some inputs (left-hand side of the `.` above) which the PBT library will instantiate to random values before checking the property (right-hand side). In effect the PBT library will generate unit tests, e.g. the list `[1, 2, 3]` can be generated and reversing that list twice will give back the same list. How many unit tests are generated can be controlled via a parameter of the PBT library.
+
+Typical properties to check for include: involution, inverses, associativity, etc. Also note the structural similarity of PBT with proof by (structural) induction.
+
 ## Motivation
 
--   The combinatorics of testing feature interaction of stateful systems:
-    -   *n* features and 3-4 tests per feature  ⇒ *O*(*n*) test cases
-    -   *n* features and testing pairs of features  ⇒ *O*(*n*<sup>2</sup>) test cases
-    -   *n* features and testing triples of features  ⇒ *O*(*n*<sup>3</sup>) test cases
-    -   Race conditions? (at least two features, non-deterministic)
+The nice thing about pure functions is that we can test them in isolation and compose them into bigger functions that are are still “correct”.
+
+The same thing cannot be said for stateful programs, because features of a stateful program depend on the current state of the system and so one feature can change the state in a way that breaks another feature. With other words we often cannot test features in isolation, this is sometimes called the [feature interaction problem](https://en.wikipedia.org/wiki/Feature_interaction_problem).
+
+Let’s have a look at the combinatorics of testing feature interaction of stateful systems:
+
+-   *n* features and 3-4 tests per feature  ⇒ *O*(*n*) test cases
+-   *n* features and testing pairs of features  ⇒ *O*(*n*<sup>2</sup>) test cases
+-   *n* features and testing triples of features  ⇒ *O*(*n*<sup>3</sup>) test cases
+-   Race conditions? (at least two features, non-deterministic)
+
+The more features we have the more test cases we need, so PBT and generating test cases automatically is even more important in the stateful case.
 
 ## Plan
 
