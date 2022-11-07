@@ -1,5 +1,9 @@
 # Fault-injection
 
+![](../images/under_construction.gif)
+
+*While the overall structure and code will likely stay, there’s still more work needed to turn this part from a bullet point presentation into a readable text.*
+
 ## Motivation
 
 -   “almost all (92%) of the catastrophic system failures are the result of incorrect handling of non-fatal errors explicitly signaled in software. \[…\] in 58% of the catastrophic failures, the underlying faults could easily have been detected through simple testing of error handling code.” – [Simple Testing Can Prevent Most Critical Failures: An Analysis of Production Failures in Distributed Data-intensive Systems](http://www.eecg.toronto.edu/~yuan/papers/failure_analysis_osdi14.pdf)

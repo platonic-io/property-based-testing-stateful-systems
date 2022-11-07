@@ -1,5 +1,9 @@
 # Integration tests against state machine fakes and consumer-driven contract tests for the fakes
 
+![](../images/under_construction.gif)
+
+*While the overall structure and code will likely stay, there’s still more work needed to turn this part from a bullet point presentation into a readable text.*
+
 ## Motivation
 
 -   Components rarely exist in isolation, they almost always depend on some other component;

@@ -1,5 +1,9 @@
 # Simulation testing
 
+![](../images/under_construction.gif)
+
+*While the overall structure and code will likely stay, there’s still more work needed to turn this part from a bullet point presentation into a readable text.*
+
 ## Motivation
 
 -   “haven’t tested foundation\[db\] in part because their testing appears to be waaaay more rigorous than mine.” – Kyle [“aphyr”](https://twitter.com/aphyr/status/405017101804396546) Kingsbury
