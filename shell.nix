@@ -15,6 +15,7 @@ in
       haskellPackages.ormolu
       haskellPackages.tasty-discover
       hlint
+      gmp
       pandoc
       pkgconfig
       stylish-haskell

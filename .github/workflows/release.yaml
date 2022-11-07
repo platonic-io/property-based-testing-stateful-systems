@@ -33,7 +33,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
         ghc:
           - "9.0.2"
         cabal: ["3.6.2.0"]
@@ -67,9 +67,9 @@ jobs:
           cabal install exe:part5 --install-method=copy --overwrite-policy=always --installdir=dist
           mv dist/part5 part5-${{ steps.tag.outputs.tag }}-${{ runner.os }}-ghc-${{ matrix.ghc }}
 
-      - name: Upload release asset
-        uses: softprops/action-gh-release@v1
-        with:
-          files: part5-${{ steps.tag.outputs.tag }}-${{ runner.os }}-ghc-${{ matrix.ghc }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Upload release asset
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     files: part5-${{ steps.tag.outputs.tag }}-${{ runner.os }}-ghc-${{ matrix.ghc }}
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
