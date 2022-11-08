@@ -1,4 +1,5 @@
 # Based on https://vrom911.github.io/blog/github-actions-releases
+# See also: https://teddit.net/r/haskell/comments/yngcnu/anyone_have_an_uptodate_github_action_config_that/
 
 name: Release
 
