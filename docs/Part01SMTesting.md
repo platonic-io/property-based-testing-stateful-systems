@@ -6,12 +6,13 @@ Before we get into how to apply property-based testing (PBT) to stateful systems
 
 -   `forall (xs: List Int). reverse (reverse xs) == xs`
 -   `forall (i : Input). deserialise (serialise i) == i`
+-   `forall (xs : List Int). sort (sort xs) == sort xs`
 -   `forall (i j k : Int). (i + j) + k == i + (j + k)`
 -   `forall (x : Int, xs : List Int). member x (insert x xs) && not (member x (remove x xs))                                  && x /= y => member y xs == member y (insert x xs)                                  && x /= y => member y xs == member y (remove x xs)`
 
 The idea is that we quantify over some inputs (left-hand side of the `.` above) which the PBT library will instantiate to random values before checking the property (right-hand side). In effect the PBT library will generate unit tests, e.g. the list `[1, 2, 3]` can be generated and reversing that list twice will give back the same list. How many unit tests are generated can be controlled via a parameter of the PBT library.
 
-Typical properties to check for include: involution (reverse example above), inverses (serialise example), associativity (addition example), axioms of abstract datatypes (member example) etc. Readers familiar with discrete math might also notice the structural similarity of PBT with proof by induction, in a sense: the more unit tests we generate the closer we come to approximating proof by induction (not quite true but could be a helpful analogy for now, we’ll come back to this later).
+Typical properties to check for include: involution (reverse example above), inverses (serialise example), idempotency (sort example), associativity (addition example), axioms of abstract datatypes (member example) etc. Readers familiar with discrete math might also notice the structural similarity of PBT with proof by induction, in a sense: the more unit tests we generate the closer we come to approximating proof by induction (not quite true but could be a helpful analogy for now, we’ll come back to this later).
 
 ## Motivation
 
