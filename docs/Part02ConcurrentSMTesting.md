@@ -444,4 +444,4 @@ When you got a state machine model of a program, you can get race conditions tes
 
 ## Next up
 
-In [part 3](./Part03SMContractTesting.md) we will look at how we can turn state machine models into [fakes](https://martinfowler.com/articles/mocksArentStubs.html) which can be used for fast and deterministic integration testing. The fakes are [contract tested](https://martinfowler.com/bliki/ContractTest.html) using the technique from this lecture, to ensure that they are faithful to the real implementation.
+In [part 3](./Part03SMContractTesting.md#readme) we will look at how we can turn state machine models into [fakes](https://martinfowler.com/articles/mocksArentStubs.html) which can be used for fast and deterministic integration testing. The fakes are [contract tested](https://martinfowler.com/bliki/ContractTest.html) using the technique from this lecture, to ensure that they are faithful to the real implementation.

@@ -660,7 +660,7 @@ Summary
 Next up
 -------
 
-Finally in [part 5](./Part05SimulationTesting.md), we will look at how we can
-simulate the running of a whole network of nodes using fakes and ensure that
+Finally in [part 5](./Part05SimulationTesting.md#readme), we will look at how we
+can simulate the running of a whole network of nodes using fakes and ensure that
 properties hold while injecting faults into the network. By doing so we can
 achieve fast and deterministic end-to-end test of distributed systems.
