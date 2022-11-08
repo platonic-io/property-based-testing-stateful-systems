@@ -11,6 +11,9 @@ typical examples:
 - `forall (xs: List Int). reverse (reverse xs) == xs`
 - `forall (i : Input). deserialise (serialise i) == i`
 - `forall (i j k : Int). (i + j) + k == i + (j + k)`
+- `forall (x : Int, xs : List Int). member x (insert x xs) && not (member x (remove x xs))
+                                 && x /= y => member y xs == member y (insert x xs)
+                                 && x /= y => member y xs == member y (remove x xs)`
 
 The idea is that we quantify over some inputs (left-hand side of the `.` above)
 which the PBT library will instantiate to random values before checking the
@@ -20,11 +23,12 @@ give back the same list. How many unit tests are generated can be controlled via
 a parameter of the PBT library.
 
 Typical properties to check for include: involution (reverse example above),
-inverses (serialise example), associativity (addition example), etc. Readers
-familiar with discrete math might also notice the structural similarity of PBT
-with proof by induction, in a sense: the more unit tests we generate the closer
-we come to approximating proof by induction (not quite true but could be a
-helpful analogy for now, we'll come back to this later).
+inverses (serialise example), associativity (addition example), axioms of
+abstract datatypes (member example) etc. Readers familiar with discrete math
+might also notice the structural similarity of PBT with proof by induction, in a
+sense: the more unit tests we generate the closer we come to approximating proof
+by induction (not quite true but could be a helpful analogy for now, we'll come
+back to this later).
 
 Motivation
 ----------
@@ -349,6 +353,9 @@ skips the generation step.
 Demo script
 -----------
 
+Here's an example REPL session using the above code, to give you an idea of how
+it executes without having to load and run it yourself.
+
 ```
   > c <- newCounter
   > get c
@@ -415,28 +422,32 @@ Demo script
 Discussion
 ----------
 
-- Q: The specification is longer than the SUT!?
+Q: The specification is longer than the SUT!?
 
-  A: For something as simple as a counter, this is true, but for any "real
-     world" system that e.g. persists to disk the model will likely be smaller
-     by an order of magnitude or more.
+A: For something as simple as a counter, this is true, but for any "real world"
+   system that e.g. persists to disk the model will likely be smaller by an
+   order of magnitude or more.
 
-     The model can also be used for:
+   The model can also be used for:
 
-       - PoC / demo, before real implementation starts
-       - documentation / on-boarding
-       - race condition testing (part 2)
-       - as a fake (part 3).
+     - Proof-of-concepts or demos, before real implementation starts;
+     - Documentation and on-boarding material (easier to understand the
+       smaller model than the real thing);
+     - Race condition testing (more on this in the next part);
+     - As a test double [fake](https://www.martinfowler.com/bliki/TestDouble.html) (part 3).
 
 Excerises
 ---------
+
+Don't take these too seriously, they are merely here to give you some
+inspiration of small stuff to play with.
 
 0. If you're not comfortable with Haskell, port the above code to your favorite
    programming language.
 
 1. Add a `Reset` `Command` which resets the counter to its initial value.
 
-2. Implement shrinking for programs.
+2. Reimplement shrinking for programs.
 
 3. Write a REPL for the state machine. Start with the initial state, prompt the
    user for a command, apply the provided command to the step function and
@@ -465,6 +476,9 @@ Excerises
 
 See also
 --------
+
+In case your are interested in finding out more, here are some resources. They
+are kind of sorted in increasing level of difficulty.
 
 - For more on how feature interaction gives rise to bugs see the following [blog
   post](https://www.hillelwayne.com/post/feature-interaction/) by Hillel Wayne
