@@ -6,11 +6,13 @@ Before we get into how to apply property-based testing (PBT) to stateful systems
 
 -   `forall (xs: List Int). reverse (reverse xs) == xs`
 -   `forall (i : Input). deserialise (serialise i) == i`
+-   `forall (xs : List Int). sort (sort xs) == sort xs`
 -   `forall (i j k : Int). (i + j) + k == i + (j + k)`
+-   `forall (x : Int, xs : List Int). member x (insert x xs) && not (member x (remove x xs))                                  && x /= y => member y xs == member y (insert x xs)                                  && x /= y => member y xs == member y (remove x xs)`
 
 The idea is that we quantify over some inputs (left-hand side of the `.` above) which the PBT library will instantiate to random values before checking the property (right-hand side). In effect the PBT library will generate unit tests, e.g. the list `[1, 2, 3]` can be generated and reversing that list twice will give back the same list. How many unit tests are generated can be controlled via a parameter of the PBT library.
 
-Typical properties to check for include: involution, inverses, associativity, etc. Also note the structural similarity of PBT with proof by (structural) induction.
+Typical properties to check for include: involution (reverse example above), inverses (serialise example), idempotency (sort example), associativity (addition example), axioms of abstract datatypes (member example) etc. Readers familiar with discrete math might also notice the structural similarity of PBT with proof by induction, in a sense: the more unit tests we generate the closer we come to approximating proof by induction (not quite true but could be a helpful analogy for now, we’ll come back to this later).
 
 ## Motivation
 
@@ -29,39 +31,57 @@ The more features we have the more test cases we need, so PBT and generating tes
 
 ## Plan
 
--   Testing: “the process of using or trying something to see if it works, is suitable, obeys the rules, etc.” – Cambridge dictionary
+If one looks up the definition of “testing” in the dictionary it says:
 
--   In order to check that the software under test (SUT) obeys the rules we must first write down the rules
+> “the process of using or trying something to see if it works, is suitable, obeys the rules, etc.”
 
--   A state machine specification is one a way to formally “write down the rules”
+In order to check that the software under test (SUT) obeys the rules we must first write down the rules. In the pure setting we did this through a predicate on the output. In the stateful setting we need to account for the state somehow, we will be using a state machine specification achieve this.
 
--   Since the state machine specification is executable (we can feed it input and get output), we effectively got a [test oracle](https://en.wikipedia.org/wiki/Test_oracle) or a [test double fake](https://en.wikipedia.org/wiki/Test_double) of the SUT
+Since the state machine specification is executable, i.e. it has the type `Input -> State -> (Output, State)` so we can feed it input and the current state to get an output and the next state, we effectively got a [test oracle](https://en.wikipedia.org/wiki/Test_oracle) or a [test double fake](https://en.wikipedia.org/wiki/Test_double) of the SUT.
 
--   Testing strategy: generate a sequence of random inputs, run it against the real SUT and against the fake and see if the outputs match
+Our testing strategy will be to generate a sequence of random inputs, then for each input run it against the real SUT and against the state machine model and see if the outputs match, and then repeat the procedure with the next input using the updated state.
 
 ## How it works
 
+Before we dive into the code lets try to visualise how what we just described fits together.
+
 ## Test case generation
+
+A test case is merely a sequence of inputs to the SUT. We generate it using a seed and a max length parameter that bounds the length of the sequence.
 
 <img src="../images/generator.svg" width="400" />
 
 ## State machine testing
 
+Once we generated the sequence we process it one input at the time, and apply the input to both the SUT and the state machine model, and then assert that the outputs match, rinse and repeat with the updated state.
+
 <img src="../images/sm-testing-small.jpg" width="500" />
 
 ## Shrinking, when assertions fail
 
+When an assertion fails, it’s useful to try to present the minimal sequence of inputs that caused the failure. This process is sometimes called shrinking and it works like this: start with the original sequence of inputs then form a tree where the children drops some of their parents inputs, like so:
+
 <img src="../images/shrinking-small.jpg" width="400" />
+
+Opon a failure we proceed depth-first through the tree, initially aggressively pruning the tree to try to find a smaller set of inputs that still produce a failure. We stop going deeper when the failure no longer happens, and present the most recently failing parent.
+
+For example, the generate sequence `< i_0, i_1, i_2, i_3 >` fails, so first we check that `< i_0, i_1 >` fails, lets say it doesn’t so then we are done with that branch and instead check `< i_2, i_3 >`, lets say that does fail then we proceed trying if only `< i_2 >` or `< i_3 >` fail, if they don’t then `< i_2, i_3 >` is the counter example we present.
 
 ## Regression testing
 
+If we find a sequence of inputs that cause a failure, we might want to save that test case as a regression test. It can be helpful to think of a regression test as a path through a (different from the shrinking) tree:
+
 <img src="../images/regression.svg" width="400" />
+
+Where we got some initial state *s*<sub>0</sub>, then by applying input *i*<sub>0</sub> we get to some new state *s*<sub>1</sub> and so on. Note that this tree can be infinitely branching if the state space is infinite.
 
 ## Coverage
 
--   Risk when generating random test cases: are we generating interesting test cases?
--   How to measure coverage
--   Corner case thinking and unit tests as basis, e.g. try 0, -1, maxInt, etc
+One common mistake that people make when doing PBT is to assume that the coverage is good, due to the randomness of test case generation.
+
+Corner case thinking associated with good unit tests still applies, e.g. make sure we try 0, -1, maxInt, etc, but instead of writing those unit tests we ensure that those test cases get generated by monitoring the generation procedure!
+
+We can think of coverage as making sure that certains paths appear in our tree with state in the nodes and inputs along the edges.
 
 <img src="../images/coverage.svg" width="400" />
 
@@ -308,6 +328,8 @@ assertProgram msg prog = do
 
 ## Demo script
 
+Here’s an example REPL session using the above code, to give you an idea of how it executes without having to load and run it yourself.
+
       > c <- newCounter
       > get c
       0
@@ -370,24 +392,27 @@ assertProgram msg prog = do
 
 ## Discussion
 
--   Q: The specification is longer than the SUT!?
+Q: The specification is longer than the SUT!?
 
-    A: For something as simple as a counter, this is true, but for any “real world” system that e.g. persists to disk the model will likely be smaller by an order of magnitude or more.
+A: For something as simple as a counter, this is true, but for any “real world” system that e.g. persists to disk the model will likely be smaller by an order of magnitude or more.
 
-    The model can also be used for:
+The model can also be used for:
 
-         - PoC / demo, before real implementation starts
-         - documentation / on-boarding
-         - race condition testing (part 2)
-         - as a fake (part 3).
+     - Proof-of-concepts or demos, before real implementation starts;
+     - Documentation and on-boarding material (easier to understand the
+       smaller model than the real thing);
+     - Race condition testing (more on this in the next part);
+     - As a test double [fake](https://www.martinfowler.com/bliki/TestDouble.html) (part 3).
 
 ## Excerises
+
+Don’t take these too seriously, they are merely here to give you some inspiration of small stuff to play with.
 
 0.  If you’re not comfortable with Haskell, port the above code to your favorite programming language.
 
 1.  Add a `Reset` `Command` which resets the counter to its initial value.
 
-2.  Implement shrinking for programs.
+2.  Reimplement shrinking for programs.
 
 3.  Write a REPL for the state machine. Start with the initial state, prompt the user for a command, apply the provided command to the step function and display the response as well as the new state, rinse and repeat.
 
@@ -408,6 +433,8 @@ assertProgram msg prog = do
 5.  Collect timing information about how long each command takes to execute on average.
 
 ## See also
+
+In case your are interested in finding out more, here are some resources. They are kind of sorted in increasing level of difficulty.
 
 -   For more on how feature interaction gives rise to bugs see the following [blog post](https://www.hillelwayne.com/post/feature-interaction/) by Hillel Wayne summarising [Pamela Zave](https://en.wikipedia.org/wiki/Pamela_Zave)’s work on the topic;
 
