@@ -91,13 +91,13 @@ to test a distributed system that uses replicated state machines.
 Table of contents
 -----------------
 
-1. [State machine testing](./docs/Part01SMTesting.md)
+1. [State machine testing](./docs/Part01SMTesting.md#readme)
 2. [Concurrent state machine testing with
-   linearisability](./docs/Part02ConcurrentSMTesting.md)
+   linearisability](./docs/Part02ConcurrentSMTesting.md#readme)
 3. [Integration tests against state machine fakes and consumer-driven contract
-   tests for the fakes](./docs/Part03SMContractTesting.md)
-4. [Fault-injection](./docs/Part04FaultInjection.md)
-5. [Simulation testing](./docs/Part05SimulationTesting.md)
+   tests for the fakes](./docs/Part03SMContractTesting.md#readme)
+4. [Fault-injection](./docs/Part04FaultInjection.md#readme)
+5. [Simulation testing](./docs/Part05SimulationTesting.md#readme)
 
 Usage
 -----
@@ -114,7 +114,7 @@ The literate code is transformed into markdown using
 [`tools/generate_markdown.sh`](./tools/generate_markdown.sh) and the markdown is
 put inside the [`docs`](./docs) directory for easier browsing.
 
-The following is a link to the [first part](./docs/Part01SMTesting.md) of the
+The following is a link to the [first part](./docs/Part01SMTesting.md#readme) of the
 generate markdown, at the end it will link to the second part and so on. Or you
 can use the table of contents above or the `docs` directory to jump to desired
 part straight away.

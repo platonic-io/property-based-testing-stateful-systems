@@ -530,6 +530,6 @@ generate unit tests for *stateful* functions/components.
 Next up
 -------
 
-In [part 2](./Part02ConcurrentSMTesting.md) we will reuse the same counter state
-machine model, but test the implementation concurrently in order to try to find
-race conditions.
+In [part 2](./Part02ConcurrentSMTesting.md#readme) we will reuse the same
+counter state machine model, but test the implementation concurrently in order
+to try to find race conditions.

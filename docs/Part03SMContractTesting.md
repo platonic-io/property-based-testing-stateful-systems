@@ -163,4 +163,4 @@ Why not just spin up the real component B when testing component A?
 
 ## Next up
 
-In [part 4](./Part04FaultInjection.md) we will look at how we can test some “unhappy paths” of the SUT by injecting faults into our fakes.
+In [part 4](./Part04FaultInjection.md#readme) we will look at how we can test some “unhappy paths” of the SUT by injecting faults into our fakes.
