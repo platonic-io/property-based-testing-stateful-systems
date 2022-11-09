@@ -187,7 +187,7 @@ and read from. It's implemented using a mutable reference (`IORef`) to an `Int`.
 > incr (Counter ref) i = do
 >   j <- readIORef ref
 >   if j > 1000
->   then writeIORef ref (i + j + 1) -- NOTE: this is a BUG!
+>   then writeIORef ref (i + j + 1)
 >   else writeIORef ref (i + j)
 
 > get :: Counter -> IO Int
@@ -251,7 +251,7 @@ property-based testing library.
 > genCommand = oneof [Incr <$> genInt, return Get]
 
 > genInt :: Gen Int
-> genInt = oneof [arbitrary] -- , elements [0, 1, maxBound, -1, minBound]] -- TODO: Fix coverage by uncommenting.
+> genInt = oneof [arbitrary]
 
 We can sample our program generator to get a feel for what kind of programs it
 generates.
@@ -448,11 +448,18 @@ inspiration of small stuff to play with.
 0. If you're not comfortable with Haskell, port the above code to your favorite
    programming language.
 
-1. Add a `Reset` `Command` which resets the counter to its initial value.
+1. Run the `prop_counter` property, perhaps using `withMaxSuccess` to adjust the
+   number of test cases generated, in order to trigger a bug that we've hidden
+   somewhere in the SUT. Fix the bug and ensure that tests pass.
 
-2. Reimplement shrinking for programs.
+2. Notice that the coverage says 0% overflow (corner) test cases, fix generation
+   so that overflow cases are more likely to happen.
 
-3. Write a REPL for the state machine. Start with the initial state, prompt the
+3. Add a `Reset` `Command` which resets the counter to its initial value.
+
+4. Reimplement shrinking for programs.
+
+5. Write a REPL for the state machine. Start with the initial state, prompt the
    user for a command, apply the provided command to the step function and
    display the response as well as the new state, rinse and repeat.
 
@@ -461,9 +468,9 @@ inspiration of small stuff to play with.
    specification first, demo it using something like a REPL or some other simple
    UI before even starting to implement the real thing.)
 
-4. Add a coverage check ensures that we do a `Get` after an overflow has happened.
+6. Add a coverage check ensures that we do a `Get` after an overflow has happened.
 
-5. Write a display function for `Trace` which shows how the system evolved over
+7. Write a display function for `Trace` which shows how the system evolved over
    time, the output could for example look like this:
 
   ```
@@ -474,7 +481,7 @@ inspiration of small stuff to play with.
      ...
   ```
 
-5. Collect timing information about how long each command takes to execute on
+8. Collect timing information about how long each command takes to execute on
    average.
 
 See also
@@ -526,6 +533,13 @@ Summary
 Property-based testing lets us *generate unit tests* for pure
 functions/components, property-based testing using state machine models lets us
 generate unit tests for *stateful* functions/components.
+
+Given the feature interaction problem PBT are arguably even more important in
+the stateful than in the pure setting.
+
+Even though we generate unit tests it's still important to think like as if one
+is writing good unit tests, i.e. consider the corner cases and ensure they are
+part of the generated test cases.
 
 Next up
 -------
