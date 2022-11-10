@@ -10,54 +10,90 @@ Concurrent state machine testing with linearisability
 Motivation
 ----------
 
-- In the previous chapter we saw how to test if a sequential (single-threaded)
-  program respects some state machine specification
+In the [previous part](./docs/Part01SMTesting.md#readme) we saw how to test if
+a sequential (single-threaded) program respects some state machine specification.
 
-- Next we show how the *same* specification can be used to check if a
-  concurrent execution is correct using linearisability
+We did so by generating a random sequence of commands and then applied them one
+by one to both the real software under test (SUT) and the state machine
+specification and compared the outputs.
 
-- E.g. counters are often shared among different threads, how can we test that
-  the counter implementation is thread-safe?
+Counters are often shared among different threads though, for example to keep
+track of some metric like current number of concurrent connections that our
+service is serving.
+
+So we might want to ask ourselves: how can we test that the counter
+implementation is thread-safe?
+
+Below we will show how the *same* state machine specification that we already
+developed previously can be used to check if a concurrent execution is correct
+using a technique called linearisability checking.
 
 Plan
 ----
 
-- Reuse the counter SUT and model from previous part;
+More concretely, we'll reuse both the counter SUT and model from previous part.
 
-- Generate concurrent programs by instead of generating list of commands
-  generate lists of lists of commands where the outer list represents commands
-  that should be executed concurrently;
+However instead of generating a sequential program (a list of commands), we'll
+generate concurrent programs by generating lists of lists of commands where the
+outer list represents commands that should be executed concurrently.
 
-- Collect a concurrent history of when each command started and finished
-  executing on each thread;
+We'll use several threads to execute those concurrent program and collect a
+concurrent history of when each command started and finished executing on each
+thread.
 
-- Try to find a sequential path through the concurrent history that respects our
-  sequential model, if we do we know that the concurrent execution is correct.
+Linearisability checking is essentially to try to find a sequential path through
+the concurrent history that respects our sequential model, if we do we know that
+the concurrent execution is correct.
 
 How it works
 ------------
 
-Concurrent history
-------------------
+We can visualise a *concurrent history* of the execution of commands by several
+threads over time as follows.
 
 ![](../images/concurrent_counter.svg){ width=400px }
 
-Possible interleaving 1
------------------------
+Note that the execution of some commands overlap in time, this is what's meant
+by concurrent.
+
+One such concurrent history can different interleavings, depending on when
+exactly the effect of the commands happen. Here are two possible interleavings,
+where the red cross symbolises when the effect happend.
+
+The first corresponds to the sequential history `< incr 1, get, incr 2, get >`:
 
 ![](../images/concurrent_counter_get_1_3.svg){ width=400px }
 
-- `< incr 1, get, incr 2, get >`
-
-Possible interleaving 2
------------------------
+and the other interleaving corresponds to the sequential history `< incr 1, incr
+2, get, get >`:
 
 ![](../images/concurrent_counter_get_3_3.svg){ width=400px }
 
-- `< incr 1, incr 2, get, get >`
+One last thing we've left out from the concurrent history so far is the
+responses. In this example, the only interesting responses are those of the
+`get`s.
+
+Let's say that the `get`s returned `1` and `3` respectively. Is this a correct
+concurrent outcome? Yes, according to linearisability it's enough to find a
+single interleaving for which the sequential state machine model can explain the
+outcome and in this case the first interleaving above `< incr 1, get, incr 2,
+get >` does that.
+
+What if the `get`s both returned `3`? That's also correct and witnessed by the
+second interleaving `< incr 1, incr 2, get, get >`. When we can find a
+sequential interleaving that supports the outcome of a concurrent execution we
+say that the concurrent history linearises.
+
+If the second `get` returned `1` or `2` however it would be a non-linearising
+outcome. We can see visually that the second `get` happens after both `incr`.
+When can this occur? Imagine if `incr` is implemented by first reading the
+current value then storing the incremented value, in that case there can be a
+race where the `incr`s overwrite each other.
 
 Code
 ----
+
+ <!---
 
 > {-# LANGUAGE DeriveFunctor #-}
 > {-# LANGUAGE ScopedTypeVariables #-}
@@ -83,6 +119,8 @@ Code
 >                         sample, quickCheck)
 > import Test.QuickCheck.Monadic (PropertyM, run, assert, monitor, monadicIO)
 > import Test.HUnit (Assertion, assertBool)
+
+-->
 
 We will reuse the counter SUT and model from the previous part.
 
@@ -394,11 +432,15 @@ Discussion
   detector](https://go.dev/blog/race-detector) or the Haskell library
   [dejafu](https://hackage.haskell.org/package/dejafu).
 
+- TODO: What about other [consistency models](https://jepsen.io/consistency)?
+
 - Linearisability is by no means an intuitive concept, it will take a while
   before it sinks in. Meanwhile, feel free to ask questions.
 
 Exercises
 ---------
+
+0. TODO: Draw a couple of histories and ask if they linearise or not
 
 0. Can you figure out ways to improve the shrinking? (Hint: see parallel
    shrinking in
@@ -415,17 +457,21 @@ Exercises
    (Hint: perhaps taking inspiration from the diagrams in the beginning of this
    part.)
 
+3. List other techniques you know which can help with finding race conditions.
+
+4. What are the pros and cons of black- and white-box techniques?
+
 See also
 --------
 
 - [*Finding Race Conditions in Erlang with QuickCheck and
-  PULSE*](http://www.cse.chalmers.se/~nicsma/papers/finding-race-conditions.pdf)
-  (2009) ([video](https://vimeo.com/6638041)) -- this paper describes how
+  PULSE*](http://www.cse.chalmers.se/~nicsma/papers/finding-race-conditions.pdf) (2009)
+  ([video](https://vimeo.com/6638041)) -- this paper describes how
   Erlang's (closed source) version QuickCheck does concurrent testing (it was
   the first property-based testing library to do so);
 
 - [*Linearizability: a correctness condition for concurrent
-  objects*](https://cs.brown.edu/~mph/HerlihyW90/p463-herlihy.pdf)] (1990), this
+  objects*](https://cs.brown.edu/~mph/HerlihyW90/p463-herlihy.pdf) (1990), this
   is a classic paper that describes the main technique of the concurrent
   property;
 
@@ -449,7 +495,11 @@ Summary
 -------
 
 When you got a state machine model of a program, you can get race conditions
-testing for free.
+testing for free via linearisability.
+
+It's enough to find a single sequential interleaving through a concurrent
+history that respects the sequential state machine model for the concurrent
+execution to be correct with respect to linearisability.
 
 Next up
 -------
@@ -459,4 +509,4 @@ state machine models into
 [fakes](https://martinfowler.com/articles/mocksArentStubs.html) which can be
 used for fast and deterministic integration testing. The fakes are [contract
 tested](https://martinfowler.com/bliki/ContractTest.html) using the technique
-from this lecture, to ensure that they are faithful to the real implementation.
+from this part, to ensure that they are faithful to the real implementation.
