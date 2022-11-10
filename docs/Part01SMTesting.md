@@ -4,7 +4,7 @@
 
 Before we get into how to apply property-based testing (PBT) to stateful systems, lets recall what PBT of pure programs looks like. Here are a few typical examples:
 
--   `forall (xs: List Int). reverse (reverse xs) == xs`
+-   `forall (xs : List Int). reverse (reverse xs) == xs`
 -   `forall (i : Input). deserialise (serialise i) == i`
 -   `forall (xs : List Int). sort (sort xs) == sort xs`
 -   `forall (i j k : Int). (i + j) + k == i + (j + k)`
