@@ -14,8 +14,8 @@ In the [previous part](./docs/Part01SMTesting.md#readme) we saw how to test if
 a sequential (single-threaded) program respects some state machine specification.
 
 We did so by generating a random sequence of commands and then applied them one
-by one to both the real software under test (SUT) and the state machine
-specification and compared the outputs.
+by one to both the real software under test (SUT), a counter, and the state
+machine specification and then compared the outputs.
 
 Counters are often shared among different threads though, for example to keep
 track of some metric like current number of concurrent connections that our
@@ -56,7 +56,7 @@ threads over time as follows.
 Note that the execution of some commands overlap in time, this is what's meant
 by concurrent.
 
-One such concurrent history can different interleavings, depending on when
+One such concurrent history can have different interleavings, depending on when
 exactly the effect of the commands happen. Here are two possible interleavings,
 where the red cross symbolises when the effect happend.
 
@@ -84,11 +84,13 @@ second interleaving `< incr 1, incr 2, get, get >`. When we can find a
 sequential interleaving that supports the outcome of a concurrent execution we
 say that the concurrent history linearises.
 
-If the `get` on the third thread returned `1` or `2` however it would be a
+If the `get` on the third thread returned `1` or `2` however, then it would be a
 non-linearisable outcome. We can see visually that that `get` happens after both
-`incr`. When can this occur? Imagine if `incr` is implemented by first reading
-the current value then storing the incremented value, in that case there can be
-a race where the `incr`s overwrite each other.
+`incr`, so no matter where we choose to place the red crosses on the `incr`s the
+effects will happen before that `get` so it must return `3`. Is it even possilbe
+that `1` or `2` are returned? It's, imagine if `incr` is implemented by first
+reading the current value then storing the incremented value, in that case there
+can be a race where the `incr`s overwrite each other.
 
 So to summarise, we execute commands concurrently using several threads and
 gather a concurrent history of the execution. We then try to find a sequential
@@ -357,9 +359,27 @@ actually execute the same generated test case ten times.
 Regression testing
 ------------------
 
-> assertHistory :: String -> History -> Assertion
-> assertHistory _msg hist =
+When we find a bug we might want to add a regression test to ensure that we
+don't accidently reintroduce the same bug later on. In the concurrent case we
+got two options, we can turn the history into a regression test.
+
+> assertHistory :: History -> Assertion
+> assertHistory hist =
 >   assertBool (prettyHistory hist) (linearisable step initModel (interleavings hist))
+
+Or we can save the test case itself.
+
+> assertConcProgram :: String -> ConcProgram -> Assertion
+> assertConcProgram _msg _prog = error "exercise"
+
+The history approach is faster and deterministic, but if the semantics of the
+SUT changes so that it doesn't produce the same history anymore then regression
+tests using this approach can become stale.
+
+Saving the concurrent test case is slower, because we need to re-execute the
+test case, and it's also not deterministic, since we might not trigger the same
+interleaving ever time we run the test. However this approach is more robust to
+change.
 
 Demo script
 -----------
@@ -385,6 +405,7 @@ it executes without having to load and run it yourself.
 
   Failed: History [Invoke (Pid 296705) (Incr 0),Invoke (Pid 296707) (Incr 14),Ok (Pid 296707) (Unit ()),Ok (Pid 296705) (Unit ()),Invoke (Pid 296709) Get,Invoke (Pid 296711) Get,Ok (Pid 296709) (Int 0),Invoke (Pid 296713) Get,Ok (Pid 296711) (Int 0),Ok (Pid 296713) (Int 0)]
 
+  -- We can manually pretty print the above as:
   Pid 296705: |---- Incr 0 -------|
   Pid 296707:   |--- Incr 14 ---|
   Pid 296709:                       |--- Get => 0 ---|
@@ -446,7 +467,40 @@ Discussion
   detector](https://go.dev/blog/race-detector) or the Haskell library
   [dejafu](https://hackage.haskell.org/package/dejafu).
 
-- TODO: What about other [consistency models](https://jepsen.io/consistency)?
+- Why are we checking linearisability rather than some other [consistency
+  model](https://jepsen.io/consistency)? The real answer here is, we merely
+  followed what Jepsen's [`knossos`](https://github.com/jepsen-io/knossos)
+  checker does.
+
+  Why does `knossos` use linearisability? Not sure, but some hints might be in
+  the original paper on linearisability (linked to below under "see also"):
+
+  > "Perhaps the major practical distinction between serializability and
+  > linearizability is that the two notions are appropriate for different problem
+  > domains. Serializability is appropriate for systems such as databases in which
+  > it must be easy for application programmers to preserve complex
+  > application-specific invariants spanning multiple objects. A general-purpose
+  > serialization protocol, such as two-phase locking, enables programmers to reason
+  > about transactions as if they were sequential programs (setting aside questions
+  > of deadlock or performance). Linearizability, by contrast, is intended for
+  > applications such as multiprocessor operating systems in which concurrency is of
+  > primary interest, and where programmers are willing to apply special-purpose
+  > synchronization protocols, and to reason explicitly about the effects of
+  > concurrency."
+
+  Perhaps linearisable is simply more suitable in general when testing
+  concurrent/multiprocessor systems than serialisability (and weaker models)?
+
+  Also:
+
+  > "In conclusion, linearizability provides benefits for specifying,
+  > implementing, and verifying concurrent objects in multiprocessor systems.
+  > Rather than introducing complex new formalisms to reason directly about
+  > concurrent computations, we feel it is more effective to transform problems
+  > in the concurrent domain into simpler problems in the sequential domain."
+
+  which we have seen in terms of being able to reuse the sequential state
+  machine model!
 
 - Linearisability is by no means an intuitive concept, it will take a while
   before it sinks in. Meanwhile, feel free to ask questions.
@@ -456,24 +510,27 @@ Exercises
 
 0. TODO: Draw a couple of histories and ask if they linearise or not
 
-0. Can you figure out ways to improve the shrinking? (Hint: see parallel
+1. Can you figure out ways to improve the shrinking? (Hint: see parallel
    shrinking in
    [`quickcheck-state-machine`](https://hackage.haskell.org/package/quickcheck-state-machine).)
 
-1. How can you test that the shrinking is good/optimal? (Hint: see how
+2. How can you test that the shrinking is good/optimal? (Hint: see how
    `labelledExamples` is used in the [*An in-depth look at
    quickcheck-state-machine*](https://www.well-typed.com/blog/2019/01/qsm-in-depth/)
    blog post by Edsko de Vries and [*Building on developers' intuitions to
    create effective property-based
    tests*](https://www.youtube.com/watch?v=NcJOiQlzlXQ) talk by John Hughes)
 
-2. Display counterexample in a way that makes it easier to see what went wrong.
+3. Display counterexample in a way that makes it easier to see what went wrong.
    (Hint: perhaps taking inspiration from the diagrams in the beginning of this
    part.)
 
-3. List other techniques you know which can help with finding race conditions.
+4. List other techniques you know which can help with finding race conditions.
 
-4. What are the pros and cons of black- and white-box techniques?
+5. What are the pros and cons of black- and white-box techniques?
+
+6. Implement a checker an other consistency model (hint: see what Jepsen's other
+   checkers do).
 
 See also
 --------
