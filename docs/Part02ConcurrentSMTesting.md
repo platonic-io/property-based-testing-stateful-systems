@@ -34,7 +34,7 @@ We can visualise a *concurrent history* of the execution of commands by several 
 
 Note that the execution of some commands overlap in time, this is what’s meant by concurrent.
 
-One such concurrent history can different interleavings, depending on when exactly the effect of the commands happen. Here are two possilbe interleavings, where the red cross symbolises when the effect happend.
+One such concurrent history can different interleavings, depending on when exactly the effect of the commands happen. Here are two possible interleavings, where the red cross symbolises when the effect happend.
 
 The first corresponds to the sequential history `< incr 1, get, incr 2, get >`:
 
@@ -50,9 +50,13 @@ Let’s say that the `get`s returned `1` and `3` respectively. Is this a correct
 
 What if the `get`s both returned `3`? That’s also correct and witnessed by the second interleaving `< incr 1, incr 2, get, get >`. When we can find a sequential interleaving that supports the outcome of a concurrent execution we say that the concurrent history linearises.
 
-If the second `get` returned `1` or `2` however it would be a non-linearising outcome. We can see visually that the second `get` happens after both `incr`. When can this occur? Imagine if `incr` is implemented by first reading the current value then storing the incremented value, in that case there can be a race where the `incr`s overwrite each other.
+If the `get` on the third thread returned `1` or `2` however it would be a non-linearisable outcome. We can see visually that that `get` happens after both `incr`. When can this occur? Imagine if `incr` is implemented by first reading the current value then storing the incremented value, in that case there can be a race where the `incr`s overwrite each other.
+
+So to summarise, we execute commands concurrently using several threads and gather a concurrent history of the execution. We then try to find a sequential interleaving (a choice of where the red crosses in the diagrams should be) which respects the a sequential state machine model specfication. If we find a single one that does, then we say that the history linearises and that the concurrent execution is correct, if we cannot find a sequential interleaving that respects the model then the history doesn’t linearise and we have found a problem.
 
 ## Code
+
+Next let us develop the code that does the concurrent execution, history collection and linearisability checking.
 
 <!---
 
@@ -350,6 +354,8 @@ assertHistory _msg hist =
 ```
 
 ## Demo script
+
+Here’s an example REPL session using the above code, to give you an idea of how it executes without having to load and run it yourself.
 
       > sample (genConcProgram initModel)
       ConcProgram []
