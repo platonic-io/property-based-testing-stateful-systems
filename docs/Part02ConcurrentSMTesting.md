@@ -50,7 +50,7 @@ Let’s say that the `get`s returned `1` and `3` respectively. Is this a correct
 
 What if the `get`s both returned `3`? That’s also correct and witnessed by the second interleaving `< incr 1, incr 2, get, get >`. When we can find a sequential interleaving that supports the outcome of a concurrent execution we say that the concurrent history linearises.
 
-If the `get` on the third thread returned `1` or `2` however, then it would be a non-linearisable outcome. We can see visually that that `get` happens after both `incr`, so no matter where we choose to place the red crosses on the `incr`s the effects will happen before that `get` so it must return `3`. Is it even possilbe that `1` or `2` are returned by a real implementation? It’s, imagine if `incr` is implemented by first reading the current value then storing the incremented value, in that case there can be a race where the `incr`s overwrite each other.
+If the `get` on the third thread returned `1` or `2` however, then it would be a non-linearisable outcome. We can see visually that that `get` happens after both `incr`, so no matter where we choose to place the red crosses on the `incr`s the effects will happen before that `get` so it must return `3`. Is it even possilbe that `1` or `2` are returned? It’s, imagine if `incr` is implemented by first reading the current value then storing the incremented value, in that case there can be a race where the `incr`s overwrite each other.
 
 So to summarise, we execute commands concurrently using several threads and gather a concurrent history of the execution. We then try to find a sequential interleaving (a choice of where the red crosses in the diagrams should be) which respects the a sequential state machine model specfication. If we find a single one that does, then we say that the history linearises and that the concurrent execution is correct, if we cannot find a sequential interleaving that respects the model then the history doesn’t linearise and we have found a problem.
 
@@ -492,17 +492,17 @@ Here’s an example REPL session using the above code, to give you an idea of ho
 
 ## Exercises
 
-0.  Consider a FIFO queue with the operations E and D for enqueue and dequeue, which of the following histories linearise?
+0.  Consider a FIFO queue with the operations `E(x)` and `D => x` for enqueue `x` and dequeue `x`, which of the following histories linearise?
 
-<!-- -->
+    1.          thread 1: |--- E(x) -----|                 |-- D => y ---|
+                thread 2:   |-- E(y) --|   |--- D => x --|
 
-1.  `thread 1: |--- E(x) -----|                 |-- D => y ---|      thread 2:   |-- E(y) --|   |--- D => x --|`
+    2.          thread 1: |-- E(x) --|           |--- D => y --|
+                thread 2:               |-- E(y) --|
 
-2.  `thread 1: |-- E(x) --|           |--- D => y --|      thread 2:               |-- E(y) --|`
-
-3.  `thread 1: |--- E(x) --|        |--- D => y --|      thread 2:    |--- E(y) --|      thread 3:                           | -- D => y --|`
-
-<!-- -->
+    3.          thread 1: |--- E(x) --|        |--- D => y --|
+                thread 2:    |--- E(y) --|
+                thread 3:                           | -- D => y --|
 
 1.  Implement regression testing using concurrent programs.
 

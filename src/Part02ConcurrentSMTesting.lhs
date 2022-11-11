@@ -522,24 +522,21 @@ Discussion
 Exercises
 ---------
 
-0. Consider a FIFO queue with the operations E and D for enqueue and dequeue,
-   which of the following histories linearise?
-
-  a. ```
-     thread 1: |--- E(x) -----|                 |-- D => y ---|
-     thread 2:   |-- E(y) --|   |--- D => x --|
-     ```
-
-  b. ```
-     thread 1: |-- E(x) --|           |--- D => y --|
-     thread 2:               |-- E(y) --|
-     ```
-
-  c. ```
-     thread 1: |--- E(x) --|        |--- D => y --|
-     thread 2:    |--- E(y) --|
-     thread 3:                           | -- D => y --|
-     ```
+0. Consider a FIFO queue with the operations `E(x)` and `D => x` for enqueue `x`
+   and dequeue `x`, which of the following histories linearise?
+    a. ```
+           thread 1: |--- E(x) -----|                 |-- D => y ---|
+       thread 2:   |-- E(y) --|   |--- D => x --|
+    ```
+    b. ```
+           thread 1: |-- E(x) --|           |--- D => y --|
+       thread 2:               |-- E(y) --|
+    ```
+    c. ```
+           thread 1: |--- E(x) --|        |--- D => y --|
+       thread 2:    |--- E(y) --|
+       thread 3:                           | -- D => y --|
+    ```
 
 1. Implement regression testing using concurrent programs.
 
