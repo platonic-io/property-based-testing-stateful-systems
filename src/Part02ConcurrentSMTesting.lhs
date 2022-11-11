@@ -491,6 +491,20 @@ Discussion
   Perhaps linearisable is simply more suitable in general when testing
   concurrent/multiprocessor systems than serialisability (and weaker models)?
 
+  Linearisability is also a local property:
+
+  > "Locality is important because it allows concurrent systems to be designed and
+  > constructed in a modular fashion; linearizable objects can be implemented,
+  > verified, and executed independently. A concurrent system based on a nonlocal
+  > correctness property must either rely on a centralized scheduler for all
+  > objects, or else satisfy additional constraints placed on objects to ensure that
+  > they follow compatible scheduling protocols. Locality should not be taken for
+  > granted; as discussed below, the literature includes proposals for alternative
+  > correctness "
+
+  Unlike Lamport's sequential consistency, which isn't local (see paper for
+  details).
+
   Also:
 
   > "In conclusion, linearizability provides benefits for specifying,
