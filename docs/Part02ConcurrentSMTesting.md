@@ -1,9 +1,5 @@
 # Concurrent state machine testing with linearisability
 
-![](../images/under_construction.gif)
-
-*While the overall structure and code will likely stay, there’s still more work needed to turn this part from a bullet point presentation into a readable text.*
-
 ## Motivation
 
 In the [previous part](./docs/Part01SMTesting.md#readme) we saw how to test if a sequential (single-threaded) program respects some state machine specification.
