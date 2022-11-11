@@ -492,19 +492,31 @@ Here’s an example REPL session using the above code, to give you an idea of ho
 
 ## Exercises
 
-0.  TODO: Draw a couple of histories and ask if they linearise or not
+0.  Consider a FIFO queue with the operations E and D for enqueue and dequeue, which of the following histories linearise?
 
-1.  Can you figure out ways to improve the shrinking? (Hint: see parallel shrinking in [`quickcheck-state-machine`](https://hackage.haskell.org/package/quickcheck-state-machine).)
+<!-- -->
 
-2.  How can you test that the shrinking is good/optimal? (Hint: see how `labelledExamples` is used in the [*An in-depth look at quickcheck-state-machine*](https://www.well-typed.com/blog/2019/01/qsm-in-depth/) blog post by Edsko de Vries and [*Building on developers’ intuitions to create effective property-based tests*](https://www.youtube.com/watch?v=NcJOiQlzlXQ) talk by John Hughes)
+1.  `thread 1: |--- E(x) -----|                 |-- D => y ---|      thread 2:   |-- E(y) --|   |--- D => x --|`
 
-3.  Display counterexample in a way that makes it easier to see what went wrong. (Hint: perhaps taking inspiration from the diagrams in the beginning of this part.)
+2.  `thread 1: |-- E(x) --|           |--- D => y --|      thread 2:               |-- E(y) --|`
 
-4.  List other techniques you know which can help with finding race conditions.
+3.  `thread 1: |--- E(x) --|        |--- D => y --|      thread 2:    |--- E(y) --|      thread 3:                           | -- D => y --|`
 
-5.  What are the pros and cons of black- and white-box techniques?
+<!-- -->
 
-6.  Implement a checker an other consistency model (hint: see what Jepsen’s other checkers do).
+1.  Implement regression testing using concurrent programs.
+
+2.  Can you figure out ways to improve the shrinking? (Hint: see parallel shrinking in [`quickcheck-state-machine`](https://hackage.haskell.org/package/quickcheck-state-machine).)
+
+3.  How can you test that the shrinking is good/optimal? (Hint: see how `labelledExamples` is used in the [*An in-depth look at quickcheck-state-machine*](https://www.well-typed.com/blog/2019/01/qsm-in-depth/) blog post by Edsko de Vries and [*Building on developers’ intuitions to create effective property-based tests*](https://www.youtube.com/watch?v=NcJOiQlzlXQ) talk by John Hughes)
+
+4.  Display counterexample in a way that makes it easier to see what went wrong. (Hint: perhaps taking inspiration from the diagrams in the beginning of this part.)
+
+5.  List other techniques you know which can help with finding race conditions.
+
+6.  What are the pros and cons of black- and white-box techniques?
+
+7.  Implement a checker an other consistency model (hint: see what Jepsen’s other checkers do).
 
 ## See also
 
