@@ -10,15 +10,38 @@ Integration tests against state machine fakes and consumer-driven contract tests
 Motivation
 ----------
 
-- Components rarely exist in isolation, they almost always depend on some other
-  component;
+So far we have seen how to test a single component sequentially ([part
+1](./docs/Part01SMTesting.md#readme)) and concurrently ([part
+2](./Part02ConcurrentSMTesting.md#readme)). Most systems are composed of several
+components however, and the global correctness of the composed system doesn't
+follow from the local correctness of its components, a typical problem being
+that the two components that are meant to talk to each other make wrong
+assumptions about each other's API.
 
-- When we test we often want to test as if the component existed in isolation
-  though, e.g. if component A depends on component B, we'd like to test B first
-  and then *assume* that B is working when testing A;
+The usual solution to this problem is to add so called integration tests which
+deploy both components and perform some kind of interaction that exercises the
+API between the commonents to ensure that the assumptions are correct. Whenever
+some component needs to be deployed it will slow down the test and most likely
+introduce some flakiness related to deployment, e.g. some port is in use
+already, or not yet available to be used, or docker registry is temporarily
+down, or some other http request that is involved during deployment fails, etc.
 
-- Assumptions like these can be justified using so called *contract tests*,
-  which is what we will be looking at next.
+In order to avoid having slow and flaky integration tests, the standard solution
+is to mock out all the dependencies of the SUT. This works, however it
+introduces a new problem: what if the mocks are incorrect (i.e. they encode the
+same false assumptions of the consumed API). The standard solution to this
+problem is to write so called (consumer-driven) contract tests which verify that
+the mock is faithful to the real component. It seems that in our industry mocks
+are fairly common, but contract tests not so much so, which has led to mocks
+sometimes being called useless -- because people have been bitten by mocks being
+wrong, because they didn't have contract tests.
+
+In our case, since we got an executable state machine model, we effectively
+already got something that is better than a mock: a fake. And furthermore we
+have already seen how to ensure that such a state machine model is faithful to
+the real component, i.e. we already know how to do contract tests. So in this
+part we will merely make these things more explicit and glue them together to
+get fast and determinsitic integration tests.
 
 Plan
 ----
