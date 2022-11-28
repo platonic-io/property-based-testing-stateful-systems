@@ -29,19 +29,19 @@ down, or some other http request that is involved during deployment fails, etc.
 In order to avoid having slow and flaky integration tests, the standard solution
 is to mock out all the dependencies of the SUT. This works, however it
 introduces a new problem: what if the mocks are incorrect (i.e. they encode the
-same false assumptions of the consumed API). The standard solution to this
-problem is to write so called (consumer-driven) contract tests which verify that
-the mock is faithful to the real component. It seems that in our industry mocks
-are fairly common, but contract tests not so much so, which has led to mocks
-sometimes being called useless -- because people have been bitten by mocks being
-wrong, because they didn't have contract tests.
+same false assumptions of the consumed API). A solution to this problem is to
+write so called (consumer-driven) contract tests which verify that the mock is
+faithful to the real component. Unfortunately this solution doesn't seem to be
+standard in our industry. Mocks are fairly common, but contract tests not so
+much so. This has led to mocks sometimes being called useless, because people
+have been bitten by mocks being wrong (because they didn't have contract tests).
 
 In our case, since we got an executable state machine model, we effectively
-already got something that is better than a mock: a fake. And furthermore we
-have already seen how to ensure that such a state machine model is faithful to
-the real component, i.e. we already know how to do contract tests. So in this
-part we will merely make these things more explicit and glue them together to
-get fast and determinsitic integration tests.
+already got something that is better than a mock: a fake. Furthermore we have
+already seen how to ensure that such a state machine model is faithful to the
+real component, i.e. we already know how to do contract tests. So in this part
+we will merely make these things more explicit and glue them together to get
+fast and determinsitic integration tests.
 
 Plan
 ----
