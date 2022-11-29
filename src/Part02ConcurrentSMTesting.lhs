@@ -52,7 +52,7 @@ by concurrent.
 
 One such concurrent history can have different interleavings, depending on when
 exactly the effect of the commands happen. Here are two possible interleavings,
-where the red cross symbolises when the effect happend.
+where the red cross symbolises when the effect happened.
 
 The first corresponds to the sequential history `< incr 1, get, incr 2, get >`:
 
