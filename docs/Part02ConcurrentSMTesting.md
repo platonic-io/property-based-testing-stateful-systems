@@ -30,7 +30,7 @@ We can visualise a *concurrent history* of the execution of commands by several 
 
 Note that the execution of some commands overlap in time, this is what’s meant by concurrent.
 
-One such concurrent history can have different interleavings, depending on when exactly the effect of the commands happen. Here are two possible interleavings, where the red cross symbolises when the effect happend.
+One such concurrent history can have different interleavings, depending on when exactly the effect of the commands happen. Here are two possible interleavings, where the red cross symbolises when the effect happened.
 
 The first corresponds to the sequential history `< incr 1, get, incr 2, get >`:
 

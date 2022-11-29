@@ -184,8 +184,8 @@ forAllConcProgram k =
 -- passes sequential tests.
 
 -- NOTE: Assumes that the service is running.
-prop_collaborationTests :: Manager -> Property
-prop_collaborationTests mgr = mapSize (min 20) $
+prop_integrationTests :: Manager -> Property
+prop_integrationTests mgr = mapSize (min 20) $
   forAllConcProgram $ \(ConcProgram reqss) -> monadicIO $ do
     monitor (classifyCommandsLength (concat reqss))
     monitor (tabulate "Client requests" (map constructorString (concat reqss)))
@@ -207,4 +207,4 @@ test = do
   -- NOTE: fake queue is used here, justified by previous contract testing.
   queue <- fakeQueue mAX_QUEUE_SIZE
   mgr   <- newManager defaultManagerSettings
-  withService queue (quickCheck (prop_collaborationTests mgr))
+  withService queue (quickCheck (prop_integrationTests mgr))
