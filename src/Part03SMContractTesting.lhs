@@ -46,15 +46,18 @@ fast and determinsitic integration tests.
 Plan
 ----
 
-1. Following the pattern from part 1: make a state machine (SM) model of the
-   dependency B, use SM testing to ensure that the model is faithful to the real
-   implementation of B (these tests are our contract tests);
+Imagine our system consists of two components: $A$ and $B$, where $A$ depends on
+$B$. We then proceed as follows:
 
-2. Turn the SM model of B into a fake and use it in-place of the real
-   implementation of B inside the real implementation of A;
+1. Following the pattern from part 1 and 2: make a state machine (SM) model of
+   the dependency $B$, use SM testing to ensure that the model is faithful to
+   the real implementation of $B$ (these tests are our contract tests);
 
-3. Repeat the first step for for component A. Note that while testing A we will
-   not be using the real component B but rather a fake of it, this gives us
+2. Turn the SM model of $B$ into a fake and use it in-place of the real
+   implementation of $B$ inside the real implementation of $A$;
+
+3. Repeat the first step for for component $A$. Note that while testing $A$ we will
+   not be using the real component $B$ but rather a fake of it, this gives us
    possibly faster and more deterministic integration tests.
 
 How it works
@@ -177,14 +180,52 @@ will break the interaction between the consumer and the producer.
 Code
 ----
 
+ <!---
+
 > module Part03SMContractTesting () where
 
-> import Part03.QueueInterface ()
+-->
+
+In order to save space we won't include all code here, but rather link to the
+relevant modules.
+
+Let's start with our dependency, the [queue](../src/Part03/Queue.hs):
+
 > import Part03.Queue ()
+
+The queue is [tested](../src/Part03/QueueTest.hs) using a state machine model like
+we did in part 1 och 2:
+
 > import Part03.QueueTest ()
 
+So far nothing new, except for terminology: because the state machine model will
+later become our fake, we call the tests that check that the model is faithful
+to the real queue: *contract tests*.
+
+Next lets have a look at the web services which depends on the queue. In order
+for us to be able to swap between the fake and the real queue implementation we
+first specify a queue [interface](../src/Part03/QueueInterface.hs):
+
+> import Part03.QueueInterface ()
+
+Our [web service](../src/Part03/Service.hs) is implemented against the
+interface:
+
 > import Part03.Service ()
+
+Notice how simple it's to implement a fake queue from the state machine model
+(we only need a mutable variable), and also notice that in, e.g., `main` we can
+select which implementation we want.
+
+When we [integration test](../src/Part03/ServiceTest.hs) the web service with
+the queue, we always use the fake queue for speed and determinism:
+
 > import Part03.ServiceTest ()
+
+Because we've made sure that the fake queue is faithful to the real queue so we
+can be reasonably sure that when we use the real queue in a "production"
+deployment the system will behave the same as it did in the tests with the fake
+queue.
 
 Discussion
 ----------

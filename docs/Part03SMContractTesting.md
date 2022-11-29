@@ -6,19 +6,23 @@
 
 ## Motivation
 
--   Components rarely exist in isolation, they almost always depend on some other component;
+So far we have seen how to test a single component sequentially ([part 1](./docs/Part01SMTesting.md#readme)) and concurrently ([part 2](./Part02ConcurrentSMTesting.md#readme)). Most systems are composed of several components however, and the global correctness of the composed system doesn’t follow from the local correctness of its components, a typical problem being that the two components that are meant to talk to each other make wrong assumptions about each other’s API.
 
--   When we test we often want to test as if the component existed in isolation though, e.g. if component A depends on component B, we’d like to test B first and then *assume* that B is working when testing A;
+The usual solution to this problem is to add so called integration tests which deploy both components and perform some kind of interaction that exercises the API between the commonents to ensure that the assumptions are correct. Whenever some component needs to be deployed it will slow down the test and most likely introduce some flakiness related to deployment, e.g. some port is in use already, or not yet available to be used, or docker registry is temporarily down, or some other http request that is involved during deployment fails, etc.
 
--   Assumptions like these can be justified using so called *contract tests*, which is what we will be looking at next.
+In order to avoid having slow and flaky integration tests, the standard solution is to mock out all the dependencies of the SUT. This works, however it introduces a new problem: what if the mocks are incorrect (i.e. they encode the same false assumptions of the consumed API). A solution to this problem is to write so called (consumer-driven) contract tests which verify that the mock is faithful to the real component. Unfortunately this solution doesn’t seem to be standard in our industry. Mocks are fairly common, but contract tests not so much so. This has led to mocks sometimes being called useless, because people have been bitten by mocks being wrong (because they didn’t have contract tests).
+
+In our case, since we got an executable state machine model, we effectively already got something that is better than a mock: a fake. Furthermore we have already seen how to ensure that such a state machine model is faithful to the real component, i.e. we already know how to do contract tests. So in this part we will merely make these things more explicit and glue them together to get fast and determinsitic integration tests.
 
 ## Plan
 
-1.  Following the pattern from part 1: make a state machine (SM) model of the dependency B, use SM testing to ensure that the model is faithful to the real implementation of B (these tests are our contract tests);
+Imagine our system consists of two components: *A* and *B*, where *A* depends on *B*. We then proceed as follows:
 
-2.  Turn the SM model of B into a fake and use it in-place of the real implementation of B inside the real implementation of A;
+1.  Following the pattern from part 1 and 2: make a state machine (SM) model of the dependency *B*, use SM testing to ensure that the model is faithful to the real implementation of *B* (these tests are our contract tests);
 
-3.  Repeat the first step for for component A. Note that while testing A we will not be using the real component B but rather a fake of it, this gives us possibly faster and more deterministic integration tests.
+2.  Turn the SM model of *B* into a fake and use it in-place of the real implementation of *B* inside the real implementation of *A*;
+
+3.  Repeat the first step for for component *A*. Note that while testing *A* we will not be using the real component *B* but rather a fake of it, this gives us possibly faster and more deterministic integration tests.
 
 ## How it works
 
@@ -89,20 +93,49 @@ So with other words, consumer-driven is just a policy about who writes which con
 
 ## Code
 
-``` haskell
-module Part03SMContractTesting () where
-```
+<!---
+
+> module Part03SMContractTesting () where
+
+-->
+
+In order to save space we won’t include all code here, but rather link to the relevant modules.
+
+Let’s start with our dependency, the [queue](../src/Part03/Queue.hs):
 
 ``` haskell
-import Part03.QueueInterface ()
 import Part03.Queue ()
+```
+
+The queue is [tested](../src/Part03/QueueTest.hs) using a state machine model like we did in part 1 och 2:
+
+``` haskell
 import Part03.QueueTest ()
 ```
 
+So far nothing new, except for terminology: because the state machine model will later become our fake, we call the tests that check that the model is faithful to the real queue: *contract tests*.
+
+Next lets have a look at the web services which depends on the queue. In order for us to be able to swap between the fake and the real queue implementation we first specify a queue [interface](../src/Part03/QueueInterface.hs):
+
+``` haskell
+import Part03.QueueInterface ()
+```
+
+Our [web service](../src/Part03/Service.hs) is implemented against the interface:
+
 ``` haskell
 import Part03.Service ()
+```
+
+Notice how simple it’s to implement a fake queue from the state machine model (we only need a mutable variable), and also notice that in, e.g., `main` we can select which implementation we want.
+
+When we [integration test](../src/Part03/ServiceTest.hs) the web service with the queue, we always use the fake queue for speed and determinism:
+
+``` haskell
 import Part03.ServiceTest ()
 ```
+
+Because we’ve made sure that the fake queue is faithful to the real queue so we can be reasonably sure that when we use the real queue in a “production” deployment the system will behave the same as it did in the tests with the fake queue.
 
 ## Discussion
 

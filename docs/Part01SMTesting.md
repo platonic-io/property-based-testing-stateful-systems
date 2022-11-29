@@ -69,7 +69,7 @@ For example, the generated sequence `< i_0, i_1, i_2, i_3 >` fails, so first we 
 
 ## Regression testing
 
-If we find a sequence of inputs that cause a failure, we might want to save that test case as a regression test. It can be helpful to think of a regression test as a path through a (different from the shrinking) tree:
+If we find a sequence of inputs that causes a failure, we might want to save that test case as a regression test. It can be helpful to think of a regression test as a path through a (different from the shrinking) tree:
 
 <img src="../images/regression.svg" width="400" />
 
@@ -407,6 +407,10 @@ Don’t take these too seriously, they are merely here to give you some inspirat
 
 0.  If you’re not comfortable with Haskell, port the above code to your favorite programming language.
 
+    The difficulty of this will vary greatly depending on what your favorite language is, how good clone of the `QuickCheck` PBT library the language has, and how comfortable you are with understanding the above Haskell code in the first place. We’d therefore like to encourage people who have successfuly done this excerise to let us know of suitable languages and PBT libraries for this task! We’ll list them here, so that people who are unsure don’t embark on an potentially impossible task.
+
+    As a further note of warning: some PBT libraries in some languages have an API very different from `QuickCheck`, but are still capable of writing the tests we did here. However their APIs might not be able to do concurrent testing like we will do in part 2 and later, for example Go’s [`gopter`](https://pkg.go.dev/github.com/leanovate/gopter) and [`rapid`](https://github.com/flyingmutant/rapid) libraries.
+
 1.  Run the `prop_counter` property, perhaps using `withMaxSuccess` to adjust the number of test cases generated, in order to trigger a bug that we’ve hidden somewhere in the SUT. Fix the bug and ensure that tests pass.
 
 2.  Notice that the coverage says 0% overflow (corner) test cases, fix generation so that overflow cases are more likely to happen.
@@ -432,6 +436,8 @@ Don’t take these too seriously, they are merely here to give you some inspirat
        ...
 
 8.  Collect timing information about how long each command takes to execute on average.
+
+9.  Some systems might have inputs which generate resources which later inputs can depend on, e.g. the unix filesystem syscall `open` returns a file descriptor which can later be passed to `read` or `write`. Figure out how to model such systems (hint: see how `Reference`s are used in the [`quickcheck-state-machine`](https://github.com/stevana/quickcheck-state-machine#readme) library).
 
 ## See also
 
