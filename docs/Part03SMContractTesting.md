@@ -1,9 +1,5 @@
 # Integration tests against state machine fakes and consumer-driven contract tests for the fakes
 
-![](../images/under_construction.gif)
-
-*While the overall structure and code will likely stay, there’s still more work needed to turn this part from a bullet point presentation into a readable text.*
-
 ## Motivation
 
 So far we have seen how to test a single component sequentially ([part 1](./docs/Part01SMTesting.md#readme)) and concurrently ([part 2](./Part02ConcurrentSMTesting.md#readme)). Most systems are composed of several components however, and the global correctness of the composed system doesn’t follow from the local correctness of its components, a typical problem being that the two components that are meant to talk to each other make wrong assumptions about each other’s API.
