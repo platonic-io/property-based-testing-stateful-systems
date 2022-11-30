@@ -437,7 +437,9 @@ Don’t take these too seriously, they are merely here to give you some inspirat
 
 8.  Collect timing information about how long each command takes to execute on average.
 
-9.  Some systems might have inputs which generate resources which later inputs can depend on, e.g. the unix filesystem syscall `open` returns a file descriptor which can later be passed to `read` or `write`. Figure out how to model such systems (hint: see how `Reference`s are used in the [`quickcheck-state-machine`](https://github.com/stevana/quickcheck-state-machine#readme) library).
+9.  Some systems might have inputs which generate resources which later inputs can depend on, e.g. the unix filesystem syscall `open` returns a file descriptor which can later be passed to `read` or `write`. Figure out how to model such systems (hint: see John Hughes’ course linked to below and how `Reference`s are used in the [`quickcheck-state-machine`](https://github.com/stevana/quickcheck-state-machine#readme) library).
+
+    (Note that adding this feature makes state machine testing more complicated, because generation, shrinking and execution needs to account for these resources. That’s why we left them out.)
 
 ## See also
 
