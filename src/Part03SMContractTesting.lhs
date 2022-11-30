@@ -51,7 +51,7 @@ $B$. We then proceed as follows:
 2. Turn the SM model of $B$ into a fake and use it in-place of the real
    implementation of $B$ inside the real implementation of $A$;
 
-3. Repeat the first step for for component $A$. Note that while testing $A$ we will
+3. Repeat the first step for component $A$. Note that while testing $A$ we will
    not be using the real component $B$ but rather a fake of it, this gives us
    possibly faster and more deterministic integration tests.
 
