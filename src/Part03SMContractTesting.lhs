@@ -1,12 +1,6 @@
 Integration tests against state machine fakes and consumer-driven contract tests for the fakes
 ==============================================================================================
 
-![](../images/under_construction.gif)
-
-*While the overall structure and code will likely stay, there’s still more work
- needed to turn this part from a bullet point presentation into a readable
- text.*
-
 Motivation
 ----------
 
@@ -20,28 +14,29 @@ assumptions about each other's API.
 
 The usual solution to this problem is to add so called integration tests which
 deploy both components and perform some kind of interaction that exercises the
-API between the commonents to ensure that the assumptions are correct. Whenever
+API between the components to ensure that the assumptions are correct. Whenever
 some component needs to be deployed it will slow down the test and most likely
 introduce some flakiness related to deployment, e.g. some port is in use
 already, or not yet available to be used, or docker registry is temporarily
 down, or some other http request that is involved during deployment fails, etc.
 
 In order to avoid having slow and flaky integration tests, the standard solution
-is to mock out all the dependencies of the SUT. This works, however it
-introduces a new problem: what if the mocks are incorrect (i.e. they encode the
-same false assumptions of the consumed API). A solution to this problem is to
-write so called (consumer-driven) contract tests which verify that the mock is
-faithful to the real component. Unfortunately this solution doesn't seem to be
-standard in our industry. Mocks are fairly common, but contract tests not so
-much so. This has led to mocks sometimes being called useless, because people
-have been bitten by mocks being wrong (because they didn't have contract tests).
+is to mock out all the dependencies of the software under test (SUT). This
+works, however it introduces a new problem: what if the mocks are incorrect
+(i.e. they encode the same false assumptions of the consumed API). A solution to
+this problem is to write so called (consumer-driven) contract tests which verify
+that the mock is faithful to the real component. Unfortunately this solution
+doesn't seem to be standard in our industry. Mocks are fairly common, but
+contract tests not so much so. This has led to mocks sometimes being called
+useless, because people have been bitten by mocks being wrong (because they
+didn't have contract tests).
 
 In our case, since we got an executable state machine model, we effectively
 already got something that is better than a mock: a fake. Furthermore we have
 already seen how to ensure that such a state machine model is faithful to the
 real component, i.e. we already know how to do contract tests. So in this part
 we will merely make these things more explicit and glue them together to get
-fast and determinsitic integration tests.
+fast and deterministic integration tests.
 
 Plan
 ----
@@ -63,20 +58,14 @@ $B$. We then proceed as follows:
 How it works
 ------------
 
-SUT with real queue
--------------------
-
 The SUT of the day is a web service which queues up client requests and has a
 worker that processes the queue and replies to the clients.
 
-![](../images/part3-web-service-with-queue-small.jpg)
+![](../images/part3-web-service-with-queue-small.jpg){ width=400px }
 
 Imagine if this queue is a separate process. This makes it a bit annoying to
 test because we need to deploy the queue first, make sure it's ready for work
 before we start testing the web service.
-
-SUT with interface
-------------------
 
 One way around the above problem is to implement the web service against an
 *interface* of the queue rather than the queue itself. We can then implement
@@ -85,23 +74,16 @@ same process as the web service hence avoiding deploying the queue before
 testing. Depending if we deploy the web service in "production" or for "testing"
 we choose the between the two implementations of the interface.
 
-![](../images/part3-web-service-with-interface-small.jpg)
+![](../images/part3-web-service-with-interface-small.jpg){ width=450px }
 
 The problem of this approach is: how do we know that the fake queue is faithful
 to the real queue implementation? We would need to test this somehow! (These
 tests are usually called contract tests.)
 
-Recall: SM testing
-------------------
-
 Let's take a step back and recall what we are doing when we are state machine
 testing. We ensure that the state machine model is faithful to the SUT.
 
-
-![](../images/part3-sm-model-small.jpg)
-
-SM model fake
--------------
+![](../images/part3-sm-model-small.jpg){ width=250px }
 
 Assuming we have a state machine model of the queue which we know is faithful to
 the real queue, is there a way to turn this model into a fake and hence solve
@@ -115,11 +97,7 @@ state machine function, update the state variable.
 (Note that the model isn't a fake because it doesn't have the same in- and
 outputs -- that's what the wrapper fixes.)
 
-
-![](../images/part3-sm-model-fake-small.jpg)
-
-Integration tests vs contract tests
------------------------------------
+![](../images/part3-sm-model-fake-small.jpg){ width=500px }
 
 Let's zoom out a bit and contemplate the general picture. Our queue can be
 thought of as a producer of the interface, while the web service is consumer of
@@ -148,18 +126,15 @@ be a consumer. The kind of testing we've talked about generalised to these
 contexts as well and done in "layers", starting with the bottom layer and going
 up.
 
-Consumer-driven contract tests
-------------------------------
+Almost done! We've seen that the job of contract tests are to ensure the
+accuracy of the fakes you use of other components in your fast and deterministic
+integration tests. We use the term *consumer-driven* contract tests if the
+consumer of the faked API writes the contract test inside the test-suite of the
+producer.
 
-The job of contract tests are to ensure the accuracy of the fakes you use of
-other components in your fast and deterministic integration tests.
-
-*Consumer-driven* contract tests just means that the consumer of the faked API
-writes the contract test inside the test-suite of the producer.
-
-If component A and B are developed in different repos or by different teams,
-then the consumer of the API (in our case A consumes B's API) should write the
-contract test (hence *consumer-driven*).
+For example, if component $A$ and $B$ are developed in different repos or by
+different teams, then the consumer of the API (in our case $A$ consumes $B$'s
+API) should write the contract test (hence *consumer-driven*).
 
 That way:
 
@@ -214,8 +189,10 @@ interface:
 > import Part03.Service ()
 
 Notice how simple it's to implement a fake queue from the state machine model
-(we only need a mutable variable), and also notice that in, e.g., `main` we can
-select which implementation we want.
+(we only need a mutable variable, this is the wrapper we talked about above in
+the "how it works" section). Also notice that in, e.g., `main` we can select
+which implementation we want because the web service is written against the
+interface.
 
 When we [integration test](../src/Part03/ServiceTest.hs) the web service with
 the queue, we always use the fake queue for speed and determinism:
@@ -326,7 +303,7 @@ Summary
   shall see next, makes it easier to introduce faults when testing;
 
 - Contract tests justify the use of fakes, in-place of the real dependencies,
-  when testing a SUT.
+  when integration testing the SUT.
 
 Next up
 -------
