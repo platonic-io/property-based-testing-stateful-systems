@@ -46,7 +46,9 @@ This is important because of how we model and check things, here’s what the li
 
 <img src="../images/part4-invoke-ok-fail-info.svg" width="600" />
 
-Where thread 2 corresponds to the first request, while thread 3 corresponds to either of the last two requests. In the case of a timeout we don’t know if the server state changed or not, so we have to assume that the request that timed out is concurrent with all future requests, i.e. we need to pretend as if it might sometime in the future return and say `ok` or `fail`. The nice thing is that the linearisability checker can do this bookkeeping so we don’t have to make any changes to our model.
+Where thread 2 corresponds to the first request, while thread 3 corresponds to either of the last two requests. In the case of a timeout we don’t know if the server state changed or not, so we have to assume that the request that timed out is concurrent with all future requests, i.e. we need to pretend as if it might sometime in the future return and say `ok` or `fail`.
+
+The nice thing is that the linearisability checker can do this bookkeeping so we don’t have to make any changes to our model. We will have to extend the linearisability checker from part 2 first though.
 
 ## Code
 
@@ -87,7 +89,7 @@ Where thread 2 corresponds to the first request, while thread 3 corresponds to e
 
 -->
 
-We have to generalise the notion of histories and linearisability from the second part to deal with faults, but otherwise the idea is the same.
+We have to [generalise](../src/Part04/LineariseWithFault.hs) the notion of histories and linearisability from the second part to deal with faults, but otherwise the idea is the same.
 
 ``` haskell
 import Part02ConcurrentSMTesting (assertWithFail, classifyCommandsLength, toPid)
