@@ -18,7 +18,7 @@ So in this part we will have a look at how we can inject faults in order to try 
 
 ## Plan
 
-Previously, in part 3, we showed how to create a thin wrapper around a state machine model in order to create a fake that can subsequently be used for integration testing. This wrapper is essentially merely a mutable variable that holds the state of the state machine between invocations.
+Previously, in [part 3](./Part03SMContractTesting.md#readme), we showed how to create a thin wrapper around a state machine model in order to create a fake that can subsequently be used for integration testing. This wrapper is essentially merely a mutable variable that holds the state of the state machine between invocations.
 
 We will extend this wrapper a little bit in a way that lets us enable and disable faults for that fake, for now just think of it as a flag that can be toggled and if the flag is set then return an error instead of the output that the state machine normally would have returned.
 
@@ -32,56 +32,54 @@ Also noteworty is that we don’t have to make any changes to the model to accou
 
 ## How faults get injected
 
-![](../images/part4-sm-model-with-fi.svg)
+<img src="../images/part4-sm-model-with-fi.svg" width="700" />
 
 ## Different types of faults
 
-![](../images/part4-seq-diagram.svg)
+<img src="../images/part4-seq-diagram.svg" width="400" />
 
 ## How linearisability checker deals with faults
 
-![](../images/part4-invoke-ok-fail-info.svg)
+<img src="../images/part4-invoke-ok-fail-info.svg" width="600" />
 
 ## Code
 
-``` haskell
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DerivingStrategies #-}
-```
+<!---
 
-``` haskell
-module Part04FaultInjection
-  ( module Part04FaultInjection
-  , module Part03.ServiceTest
-  , module Test.QuickCheck
-  )
-  where
-```
+> {-# LANGUAGE OverloadedStrings #-}
+> {-# LANGUAGE NumericUnderscores #-}
+> {-# LANGUAGE ScopedTypeVariables #-}
+> {-# LANGUAGE DerivingStrategies #-}
 
-``` haskell
-import Control.Monad (replicateM_)
-import Control.Concurrent (threadDelay, myThreadId)
-import Control.Concurrent.Async (mapConcurrently)
-import Control.Concurrent.STM (TQueue, atomically, flushTQueue, newTQueueIO)
-import Data.Vector (Vector)
-import qualified Data.Vector as Vector
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy as LBS
-import Control.Exception
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.IORef
-import Data.List (permutations)
-import Test.HUnit (Assertion, assertBool)
-import Test.QuickCheck hiding (Result)
-import Test.QuickCheck.Monadic hiding (assert)
-import Network.HTTP.Types (status503)
-import Network.HTTP.Client (HttpException(HttpExceptionRequest),
-                            HttpExceptionContent(StatusCodeException), Manager,
-                            defaultManagerSettings, newManager, responseStatus,
-                            managerResponseTimeout, responseTimeoutMicro)
-```
+> module Part04FaultInjection
+>   ( module Part04FaultInjection
+>   , module Part03.ServiceTest
+>   , module Test.QuickCheck
+>   )
+>   where
+
+> import Control.Monad (replicateM_)
+> import Control.Concurrent (threadDelay, myThreadId)
+> import Control.Concurrent.Async (mapConcurrently)
+> import Control.Concurrent.STM (TQueue, atomically, flushTQueue, newTQueueIO)
+> import Data.Vector (Vector)
+> import qualified Data.Vector as Vector
+> import Data.ByteString.Lazy (ByteString)
+> import qualified Data.ByteString.Lazy as LBS
+> import Control.Exception
+> import Control.Monad.IO.Class (MonadIO, liftIO)
+> import Data.IORef
+> import Data.List (permutations)
+> import Test.HUnit (Assertion, assertBool)
+> import Test.QuickCheck hiding (Result)
+> import Test.QuickCheck.Monadic hiding (assert)
+> import Network.HTTP.Types (status503)
+> import Network.HTTP.Client (HttpException(HttpExceptionRequest),
+>                             HttpExceptionContent(StatusCodeException), Manager,
+>                             defaultManagerSettings, newManager, responseStatus,
+>                             managerResponseTimeout, responseTimeoutMicro)
+
+-->
 
 We have to generalise the notion of histories and linearisability from the second part to deal with faults, but otherwise the idea is the same.
 
@@ -193,7 +191,7 @@ test_injectFullFault = do
   assert (res2 == False) (return ())
 ```
 
-## Sequential integration/“collaboration” testing
+## Sequential integration testing
 
 The notion of program needs to be generalised to include fault-injection, but otherwise it should look familiar.
 
@@ -436,7 +434,7 @@ assertProgram msg prog =
     isRight Left  {} = False
 ```
 
-## Concurrent integration/“collaboration” testing
+## Concurrent integration testing
 
 Generating and shrinking concurrent programs is same as before.
 
@@ -565,37 +563,37 @@ unit_concIntegrationTests = do
 
       > test_injectFullFault
       > unit_seqIntegrationTests
-      > -- Uncomment BUGs in `Service` module and show how the seq property catches them.
+      > -- Uncomment BUGs in `Service` module and show how the sequential property catches them.
       > unit_concIntegrationTests
 
 ## Discussion
 
--   Can we not just inject real faults like Jepsen does? [`iptables`](https://linux.die.net/man/8/iptables) for dropping messages and network partitions, [`tc`](https://man7.org/linux/man-pages/man8/tc.8.html) for creating latency or simulating a slow connection on the network, [`(p)kill`](https://linux.die.net/man/1/kill) for killing processes, `kill -STOP   $pid` and `kill -CONT $pid` for pausing and resuming processes to simulate long I/O or GC pauses, [`libfaketime`](https://github.com/wolfcw/libfaketime) for clock-skews, etc?
+-   Q: Can we not just inject real faults like Jepsen does? [`iptables`](https://linux.die.net/man/8/iptables) for dropping messages and network partitions, [`tc`](https://man7.org/linux/man-pages/man8/tc.8.html) for creating latency or simulating a slow connection on the network, [`(p)kill`](https://linux.die.net/man/1/kill) for killing processes, `kill   -STOP $pid` and `kill -CONT $pid` for pausing and resuming processes to simulate long I/O or GC pauses, [`libfaketime`](https://github.com/wolfcw/libfaketime) for clock-skews, etc?
 
-    We could, after all Jepsen is a very successful at finding bugs in distributed databases using these techniques. However keep in mind exactly how Jepsen is used: typically companies hire Kyle Kingsbury for a couple of weeks/months, he writes the tests and runs them, analyses the results and writes a report. Presumably while he is writing this report he runs the tests many times, getting many false positivies and flaky test runs, but since doing this analysis is his main focus he can filter out the signal from the noise. If you wanna run these tests in CI however all this noise will cause a lot of context switches and pretty fast get annoying.
+    A: We could, after all Jepsen is a very successful at finding bugs in distributed databases using these techniques. However keep in mind exactly how Jepsen is used: typically companies hire Kyle Kingsbury for a couple of weeks/months, he writes the tests and runs them, analyses the results and writes a report. Presumably while he is writing this report he runs the tests many times, getting many false positivies and flaky test runs, but since doing this analysis is his main focus he can filter out the signal from the noise. If you wanna run these tests in CI however all this noise will cause a lot of context switches and pretty fast get annoying.
 
     Other downsides include:
 
-    -   many of the above fault-injections requires root access, or they need to be done in containers or a VM which slows things down and complicates start up;
-    -   imprecise (e.g. `iptables` can’t drop exactly the 42nd message and only if it’s a read);
-    -   non-deterministic (failing test cases cannot always be reproduced reliably);
-    -   no shrinking (i.e. no minimal counterexamples);
-    -   slow (we need to wait for timeouts to happend, say, \~30-90 secs)
-    -   ci flakiness (e.g. `docker pull` failing)
+    -   Many of the above fault-injections requires root access, or they need to be done in containers or a VM which slows things down and complicates start up;
+    -   Imprecise (e.g. `iptables` can’t drop exactly the 42nd message and only if it’s a read);
+    -   Non-deterministic (failing test cases cannot always be reproduced reliably);
+    -   No shrinking (i.e. no minimal counterexamples);
+    -   Slow (we need to wait for timeouts to happend, say, \~30-90 secs);
+    -   CI flakiness (e.g. transient errors due to starting up the system, `docker     pull` failing, etc).
 
--   What about [Chaos engineering](https://en.wikipedia.org/wiki/Chaos_engineering)?
+-   Q: What about [Chaos engineering](https://en.wikipedia.org/wiki/Chaos_engineering)?
 
-    -   Chaos engineering has the same downsides as Jepsen when it comes to being slow and non-deterministic
+    A: Chaos engineering has the same downsides as Jepsen when it comes to being slow and non-deterministic.
 
-    -   It’s important to remember in which context it was developed: Netflix (hundreds(?) of already designed and deployed systems spanning datacentres around the globe), unless you are in that same situation then the fault injection techniques discussed here are far simpler to implement
+    It’s important to remember in which context it was developed: Netflix (hundreds(?) of already designed and deployed systems spanning datacentres around the globe), unless you are in that same situation then the fault injection techniques discussed here are far simpler to implement.
 
-    -   Works at a different level, e.g. “over 5% of the traffic receives 500 errors”, rather than “assertion A failed at line number L”, i.e. test failures will pin-point you much more precisely to where the problem is
+    Works at a different level, e.g. “over 5% of the traffic receives 500 errors”, rather than “assertion A failed at line number L”, i.e. test failures will pin-point you much more precisely to where the problem is.
 
-    -   Tests production configurations, as well as monitoring and alerting
+    It tests production configurations, as well as monitoring and alerting.
 
-    -   In conclusion: chaos engineering is complementary to what we discribed here, but probably less bang for the buck and should be done later – remember the quote from the motivation: “\[…\] in 58% of the catastrophic failures, the underlying faults could easily have been detected through simple testing of error handling code.”
+    In conclusion: chaos engineering is complementary to what we discribed here, but probably less bang for the buck and should be done later – remember the quote from the motivation: “\[…\] in 58% of the catastrophic failures, the underlying faults could easily have been detected through simple testing of error handling code.”.
 
--   It can be tempting to modelling the faults, this moves some non-determinism out from linearisability checker into the model. This is possible, but based from our experience not recommended as it complicated the model.
+-   Note: It can be tempting to modelling the faults, this moves some non-determinism out from linearisability checker into the model. This is possible, but based from our experience not recommended as it complicated the model.
 
 ## Exercises
 
@@ -609,9 +607,9 @@ unit_concIntegrationTests = do
 
 ## Problems
 
-0.  Can we do better than randomly inserting faults? (Hint: see [*Lineage-driven Fault Injection*](https://people.ucsc.edu/~palvaro/molly.pdf) by Alvaro et al
+There are many things related to fault injection that we don’t know how to do best, here are some of them.
 
-    2015) and the [`ldfi`](https://github.com/symbiont-io/detsys-testkit/tree/main/src/ldfi) directory in the `detsys-testkit` repo)
+0.  Can we do better than randomly inserting faults? (Hint: see [*Lineage-driven Fault Injection*](https://people.ucsc.edu/~palvaro/molly.pdf) by Alvaro et al (2015) and the [`ldfi`](https://github.com/symbiont-io/detsys-testkit/tree/main/src/ldfi) directory in the `detsys-testkit` repo)
 
 1.  Faults in the real world are often correlated with each other, i.e. if one thing fails it’s likely it will overload some other thing making it more likely to fail and so on, how can we simulate this in a good way?
 
@@ -625,10 +623,10 @@ unit_concIntegrationTests = do
 
 ## See also
 
--   [Simple Testing Can Prevent Most Critical Failures: An Analysis of Production Failures in Distributed Data-intensive Systems](http://www.eecg.toronto.edu/~yuan/papers/failure_analysis_osdi14.pdf)
-    2014) Yuan et al.
--   [*Why Is Random Testing Effective for Partition Tolerance Bugs?*](https://dl.acm.org/doi/pdf/10.1145/3158134) by Majumdar and Niksic
-    2018) 
+-   The research paper we mentioned in the motivation section: [Simple Testing Can Prevent Most Critical Failures: An Analysis of Production Failures in Distributed Data-intensive Systems](http://www.eecg.toronto.edu/~yuan/papers/failure_analysis_osdi14.pdf) (2014) Yuan et al.;
+
+-   [*Why Is Random Testing Effective for Partition Tolerance Bugs?*](https://dl.acm.org/doi/pdf/10.1145/3158134) by Majumdar and Niksic (2018) explains why Jepsen is so effective at finding bugs;
+
 -   The [`failpoint`](https://github.com/pingcap/failpoint) Go library allows us to insert failures at any point in our code, in some way this is a cheap-and-dirty way of achiving the same thing as we’ve done in this part. Cheap because it’s less work, dirty because it litters the (production) code with fail points (our fail points are hidden in the fake).
 
 ## Summary
