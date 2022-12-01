@@ -6,24 +6,27 @@
 
 ## Motivation
 
--   “almost all (92%) of the catastrophic system failures are the result of incorrect handling of non-fatal errors explicitly signaled in software. \[…\] in 58% of the catastrophic failures, the underlying faults could easily have been detected through simple testing of error handling code.” – [Simple Testing Can Prevent Most Critical Failures: An Analysis of Production Failures in Distributed Data-intensive Systems](http://www.eecg.toronto.edu/~yuan/papers/failure_analysis_osdi14.pdf)
-    2014) Yuan et al.
--   “[Jepsen](https://jepsen.io/analyses) has analyzed over two dozen databases, coordination services, and queues – and we’ve found replica divergence, data loss, stale reads, read skew, lock conflicts, and much more.”
+So far we’ve focused mostly on testing so called “happy paths”. That is code paths that don’t involve error handling. Nothing stops us from generating invalid inputs and make sure that the validation logic works though, but still this only triggers a limited set of “unhappy paths” that mostly can be tested in pure PBT way.
+
+There are many other “unhappy paths” lurking especially around networking (e.g. timeouts and retry logic), but also dependencies/subcomponents failing (e.g. the queue or disk being full).
+
+In fact [research](http://www.eecg.toronto.edu/~yuan/papers/failure_analysis_osdi14.pdf) shows that “almost all (92%) of the catastrophic system failures are the result of incorrect handling of non-fatal errors explicitly signaled in software. \[…\] in 58% of the catastrophic failures, the underlying faults could easily have been detected through simple testing of error handling code.”
+
+Also the success of [Jepsen](https://jepsen.io/analyses), which we previously mentioned, crucially relies on being able to inject faults to trigger these “unhappy paths”.
+
+So in this part we will have a look at how we can inject faults in order to try to get a better coverage in this area.
 
 ## Plan
 
--   Create a wrapper around our fake queue implementation which allows us to inject faults
+Previously, in part 3, we showed how to create a thin wrapper around a state machine model in order to create a fake that can subsequently be used for integration testing. This wrapper is essentially merely a mutable variable that holds the state of the state machine between invocations.
 
--   Possible faults to inject for the queue
+We will extend this wrapper a little bit in a way that lets us enable and disable faults for that fake, for now just think of it as a flag that can be toggled and if the flag is set then return an error instead of the output that the state machine normally would have returned.
 
-    -   write fails, e.g. queue is full
-    -   read fails, e.g. queue is empty
-    -   read crashes, e.g. bug in queue causes exception to be thrown
-    -   read returns a malformed write which no longer deserialises, or has an invalid client request id to send the response to
+For example, we can have a flag that sets if the queue is full (even though it might not be) which will reject any writes to the queue. Similarly we can imagine being able to say that the queue is empty (even though it isn’t) which will cause reads to the queue to fail, and so on.
 
--   Use the same web service model that we wrote in the previous part and do integration/“collaboration” tests with the fake queue with faults to ensure that our web service, that uses the queue, doesn’t crash even if the presence of faults in the queue
+We will then use this fault injection mechanism to inject faults while integration testing the web server (which uses the queue) to ensure that the web server doesn’t crash when “unhappy paths” are triggered.
 
--   Notice that we don’t have to make any changes to the model to account of the possible faults, the linearisability checker does this for us behind the scenes
+Also noteworty is that we don’t have to make any changes to the model to account of the possible faults, the linearisability checker does this for us behind the scenes.
 
 ## How it works
 
@@ -622,6 +625,8 @@ unit_concIntegrationTests = do
 
 ## See also
 
+-   [Simple Testing Can Prevent Most Critical Failures: An Analysis of Production Failures in Distributed Data-intensive Systems](http://www.eecg.toronto.edu/~yuan/papers/failure_analysis_osdi14.pdf)
+    2014) Yuan et al.
 -   [*Why Is Random Testing Effective for Partition Tolerance Bugs?*](https://dl.acm.org/doi/pdf/10.1145/3158134) by Majumdar and Niksic
     2018) 
 -   The [`failpoint`](https://github.com/pingcap/failpoint) Go library allows us to insert failures at any point in our code, in some way this is a cheap-and-dirty way of achiving the same thing as we’ve done in this part. Cheap because it’s less work, dirty because it litters the (production) code with fail points (our fail points are hidden in the fake).
