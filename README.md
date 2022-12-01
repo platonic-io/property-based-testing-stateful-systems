@@ -125,8 +125,8 @@ Contributing
 Any feedback, suggestions for improvement or questions are most welcome via the
 issue tracker!
 
-See the [`.github/CONTRIBUTING.md`](./.github/CONTRIBUTING.md) file for more
-detailed guidelines regarding contributing.
+See the [`CONTRIBUTING.md`](./.github/CONTRIBUTING.md) file for more detailed
+guidelines regarding contributing.
 
 License
 -------
