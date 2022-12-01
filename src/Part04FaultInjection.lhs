@@ -64,22 +64,43 @@ scenes.
 How it works
 ------------
 
-How faults get injected
------------------------
+Lets have a look at how faults get injected first. Recall, from the previous
+part, the wrapper around the state machine model that turns it into a fake (in
+black):
 
 ![](../images/part4-sm-model-with-fi.svg){ width=700px }
 
-Different types of faults
--------------------------
+The green part is what we need to add to support injecting faults. It's
+basically a way to inject faults in addition to be able to feed it input, and a
+way for the box to be able to override the state machine's output with some
+failure response.
+
+It's important to notice that there are different types of faults. Consider the
+three requests made by the client in the following diagram:
 
 ![](../images/part4-seq-diagram.svg){ width=400px }
 
+We see that the first request gets rejected, perhaps because it was malformed
+but it could also be because the server was too busy (the status code would
+probably been different then though). The first request doesn't change the
+server state. While the second and third request gets dropped in flight, but
+depending on where exactly it gets dropped the state of the server changes or
+not!
 
-How linearisability checker deals with faults
----------------------------------------------
+This is important because of how we model and check things, here's what the
+linearisability checker sees:
 
 ![](../images/part4-invoke-ok-fail-info.svg){ width=600px }
 
+Where thread 2 corresponds to the first request, while thread 3 corresponds to
+either of the last two requests. In the case of a timeout we don't know if the
+server state changed or not, so we have to assume that the request that timed
+out is concurrent with all future requests, i.e. we need to pretend as if it
+might sometime in the future return and say `ok` or `fail`.
+
+The nice thing is that the linearisability checker can do this bookkeeping so we
+don't have to make any changes to our model. We will have to extend the
+linearisability checker from part 2 first though.
 
 Code
 ----
@@ -121,8 +142,9 @@ Code
 
 -->
 
-We have to generalise the notion of histories and linearisability from the
-second part to deal with faults, but otherwise the idea is the same.
+We have to [generalise](../src/Part04/LineariseWithFault.hs) the notion of
+histories and linearisability from the second part to deal with faults, but
+otherwise the idea is the same.
 
 > import Part02ConcurrentSMTesting (assertWithFail, classifyCommandsLength, toPid)
 > import Part03.Service (withService, mAX_QUEUE_SIZE, fakeQueue, realQueue)
