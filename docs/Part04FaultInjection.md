@@ -40,7 +40,7 @@ It’s important to notice that there are different types of faults. Consider th
 
 <img src="../images/part4-seq-diagram.svg" width="400" />
 
-We see that the first request gets rejected, perhaps because it was malformed but it could also be because the server was too busy (the status code would probably been different then though). The first request doesn’t change the server state. While the second and third request gets dropped in flight, but depending on where exactly it gets dropped the state of the server changes or not!
+We see that the first request gets rejected, perhaps because it was malformed but it could also be because the server was too busy (the status code would probably been different then though). The first request doesn’t change the server state. While the second and third request gets dropped in-flight, but depending on when exactly it gets dropped the state of the server changes or not!
 
 This is important because of how we model and check things, here’s what the linearisability checker sees:
 
@@ -382,8 +382,9 @@ runProgram ref mgr m0 (Program cmds0) = go m0 cmds0
                        | otherwise     -> return (Left (concat [show resp, " /= ", show resp']))
             Nothing -> return (Left (concat [show res, " /= ", show mResp']))
         RFail -> go m cmds
-        -- For more see the "Crashes" section of https://jepsen.io/consistency
-        RInfo -> return (Left "Continuing would violate the single-threaded constraint: processes only do one thing at a time.")
+        -- For more see the "Crashes" section of https://jepsen.io/consistency.
+        RInfo -> return (Left "Continuing would violate the single-threaded \
+                             \ constraint: processes only do one thing at a time.")
         RNemesis -> do
           let (m', mResp') = step m cmd
           case mResp' of
@@ -508,7 +509,7 @@ forAllConcProgram k =
     prettyConcProgram = show
 ```
 
-Executing commands concurrent is also same as before, except histories are not richer as they need to contain the failure modes.
+Executing commands concurrent is also same as before, except histories are richer as they need to contain the failure modes.
 
 ``` haskell
 type Operation = Operation' Command (Maybe ClientResponse)
@@ -570,8 +571,8 @@ unit_concIntegrationTests = do
 ## Demo script
 
       > test_injectFullFault
-      > unit_seqIntegrationTests
-      > -- Uncomment BUGs in `Service` module and show how the sequential property catches them.
+      > unit_seqIntegrationTest
+      > -- Uncomment BUGs in `Part03.Service` module and show how the sequential property catches them.
       > unit_concIntegrationTests
 
 ## Discussion
@@ -635,7 +636,15 @@ There are many things related to fault injection that we don’t know how to do 
 
 -   [*Why Is Random Testing Effective for Partition Tolerance Bugs?*](https://dl.acm.org/doi/pdf/10.1145/3158134) by Majumdar and Niksic (2018) explains why Jepsen is so effective at finding bugs;
 
--   The [`failpoint`](https://github.com/pingcap/failpoint) Go library allows us to insert failures at any point in our code, in some way this is a cheap-and-dirty way of achiving the same thing as we’ve done in this part. Cheap because it’s less work, dirty because it litters the (production) code with fail points (our fail points are hidden in the fake).
+-   The [`failpoint`](https://github.com/pingcap/failpoint) Go library allows us to insert failures at any point in our code, in some way this is a cheap-and-dirty way of achiving the same thing as we’ve done in this part. Cheap because it’s less work, dirty because it litters the (production) code with fail points (our fail points are hidden in the fake);
+
+-   Richard Cook’s talk [“How Complex Systems Fail”](https://www.youtube.com/watch?v=2S0k12uZR14) (2012) and his [summary](https://how.complexsystems.fail/);
+
+-   [Nancy Leveson](http://sunnyday.mit.edu/)’s work on [STAMP](https://stamp-consulting.com/what-is-stamp/) and her book [“Engineering a Safer World: Systems Thinking Applied to Safety”](https://direct.mit.edu/books/book/2908/Engineering-a-Safer-WorldSystems-Thinking-Applied) (2012);
+
+-   [Resilience engineering](https://en.wikipedia.org/wiki/Resilience_engineering);
+
+-   [Complex systems](https://en.wikipedia.org/wiki/Complex_system), in particular Dave Snowden’s [work](https://www.youtube.com/watch?v=l4-vpegxYPg).
 
 ## Summary
 
