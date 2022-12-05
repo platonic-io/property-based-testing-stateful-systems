@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -6,7 +7,7 @@ module Part03.Service (module Part03.Service) where
 
 import Control.Concurrent
 import Control.Concurrent.Async
-import Control.Exception (IOException, bracket, catch)
+import Control.Exception (IOException, bracket, catch, throwIO)
 import Control.Monad (forM_)
 import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as BS8
@@ -85,32 +86,37 @@ main = do
 service :: FilePath -> QueueI Command -> IO ()
 service sqliteDbPath queue = do
   bracket (initDB sqliteDbPath) closeDB $ \conn ->
-    withAsync (worker queue conn) $ \_a -> do
+    withAsync (worker NoBug queue conn) $ \_a -> do
       _ready <- newEmptyMVar
-      runFrontEnd queue _ready pORT
+      runFrontEnd NoBug queue _ready pORT
 
-withService :: QueueI Command -> IO () -> IO ()
-withService = withService' sQLITE_DB_PATH
+data Bug = NoBug | IgnoreCheckingIfEnqueueSucceeded | DontCatchDequeueError | TooShortWorkerTimeout
+  deriving stock Eq
 
-withService' :: FilePath -> QueueI Command -> IO () -> IO ()
-withService' sqliteDbPath queue io = do
+withService :: Bug -> QueueI Command -> IO () -> IO ()
+withService bug = withService' bug sQLITE_DB_PATH
+
+withService' :: Bug -> FilePath -> QueueI Command -> IO () -> IO ()
+withService' bug sqliteDbPath queue io = do
   bracket (initDB sqliteDbPath) closeDB $ \conn ->
-    withAsync (worker queue conn) $ \wPid -> do
+    withAsync (worker bug queue conn) $ \wPid -> do
       link wPid
       ready <- newEmptyMVar
-      withAsync (runFrontEnd queue ready pORT) $ \fePid -> do
+      withAsync (runFrontEnd bug queue ready pORT) $ \fePid -> do
         link fePid
         takeMVar ready
         io
 
-worker :: QueueI Command -> Connection -> IO ()
-worker queue conn = go
+worker :: Bug -> QueueI Command -> Connection -> IO ()
+worker bug queue conn = go
   where
     go :: IO ()
     go = do
       mCmd <- qiDequeue queue
                 -- BUG: Without this catch the read error fault will cause a crash.
-                `catch` (\(_err :: IOException) -> return Nothing) -- error "TODO: catch")
+                `catch` (\(err :: IOException) -> if bug == DontCatchDequeueError
+                                                  then throwIO err
+                                                  else return Nothing)
       case mCmd of
         Nothing -> do
           threadDelay 1000 -- 1 ms
@@ -140,14 +146,13 @@ exec (Reset response) conn = do
   resetDB conn
   putMVar response ()
 
-wORKER_TIMEOUT_MICROS :: Int
-wORKER_TIMEOUT_MICROS =
-  30_000_000 -- 30s
-  -- BUG: Having a shorter worker timeout will cause the slow read fault to crash the system.
-  -- 100_000 -- 0.1s
+wORKER_TIMEOUT_MICROS :: Bug -> Int
+-- BUG: Having a shorter worker timeout will cause the slow read fault to crash the system.
+wORKER_TIMEOUT_MICROS TooShortWorkerTimeout = 100_000    -- 0.1s
+wORKER_TIMEOUT_MICROS _otherwise            = 30_000_000 -- 30s
 
-httpFrontend :: QueueI Command -> Application
-httpFrontend queue req respond =
+httpFrontend :: Bug -> QueueI Command -> Application
+httpFrontend bug queue req respond =
   case requestMethod req of
     "GET" -> do
       case parseIndex of
@@ -158,7 +163,7 @@ httpFrontend queue req respond =
           success <- qiEnqueue queue (Read ix response)
           if success
           then do
-            mMbs <- timeout wORKER_TIMEOUT_MICROS (takeMVar response)
+            mMbs <- timeout (wORKER_TIMEOUT_MICROS bug) (takeMVar response)
             case mMbs of
               Just Nothing   -> respond (responseLBS status404 [] (BS8.pack "Not found"))
               Just (Just bs) -> respond (responseLBS status200 [] bs)
@@ -169,10 +174,9 @@ httpFrontend queue req respond =
       response <- newEmptyMVar
       success <- qiEnqueue queue (Write bs response)
       -- BUG: Ignoring whether the enqueuing operation was successful or not will cause a crash.
-      -- let success = True
-      if success
+      if success || bug == IgnoreCheckingIfEnqueueSucceeded
       then do
-        mIx <- timeout wORKER_TIMEOUT_MICROS (takeMVar response)
+        mIx <- timeout (wORKER_TIMEOUT_MICROS bug) (takeMVar response)
         case mIx of
           Just ix -> respond (responseLBS status200 [] (BS8.pack (show ix)))
           Nothing -> respond (responseLBS status500 [] (BS8.pack "Internal error"))
@@ -181,7 +185,7 @@ httpFrontend queue req respond =
     "DELETE" -> do
       response <- newEmptyMVar
       _b <- qiEnqueue queue (Reset response)
-      mu <- timeout wORKER_TIMEOUT_MICROS (takeMVar response)
+      mu <- timeout (wORKER_TIMEOUT_MICROS bug) (takeMVar response)
       case mu of
         Just () -> respond (responseLBS status200 [] (BS8.pack "Reset"))
         Nothing -> respond (responseLBS status500 [] (BS8.pack "Internal error"))
@@ -195,8 +199,8 @@ httpFrontend queue req respond =
                      _otherwise -> Nothing
                    _otherwise   -> Nothing
 
-runFrontEnd :: QueueI Command -> MVar () -> Port -> IO ()
-runFrontEnd queue ready port = runSettings settings (httpFrontend queue)
+runFrontEnd :: Bug -> QueueI Command -> MVar () -> Port -> IO ()
+runFrontEnd bug queue ready port = runSettings settings (httpFrontend bug queue)
   where
     settings
       = setPort port
