@@ -1,12 +1,6 @@
 Fault-injection
 ===============
 
-![](../images/under_construction.gif)
-
-*While the overall structure and code will likely stay, there’s still more work
- needed to turn this part from a bullet point presentation into a readable
- text.*
-
 Motivation
 ----------
 
@@ -660,7 +654,8 @@ Exercises
 1. All our faults are in the dependency, i.e. the queue, what if we wanted to
    inject a fault at the web service level?
 
-2. If our faults are completely deterministic, can we avoid `info`s altogether?
+2. If our faults are completely deterministic, can we avoid `info`s in the
+   linearisability checker altogether?
 
 3. The concurrent property doesn't reveal any bugs that the sequential property
    already doesn't catch, can you think of a way of introducing a bug in the SUT
