@@ -207,4 +207,4 @@ test = do
   -- NOTE: fake queue is used here, justified by previous contract testing.
   queue <- fakeQueue mAX_QUEUE_SIZE
   mgr   <- newManager defaultManagerSettings
-  withService queue (quickCheck (prop_integrationTests mgr))
+  withService NoBug queue (quickCheck (prop_integrationTests mgr))

@@ -147,7 +147,7 @@ histories and linearisability from the second part to deal with faults, but
 otherwise the idea is the same.
 
 > import Part02ConcurrentSMTesting (assertWithFail, classifyCommandsLength, toPid)
-> import Part03.Service (withService, mAX_QUEUE_SIZE, fakeQueue, realQueue)
+> import Part03.Service (Bug(..), withService, mAX_QUEUE_SIZE, fakeQueue, realQueue)
 > import Part03.QueueInterface
 > import Part03.ServiceTest (Index(Index), httpWrite, httpRead, httpReset)
 > import Part04.LineariseWithFault (History'(History), Operation'(..), FailureMode(..), interleavings,
@@ -299,7 +299,7 @@ Generating and shrinking programs is the same as well, modulo fault-injection.
 >     genFault :: Gen Fault
 >     genFault = frequency [ (1, pure Full)
 >                          , (1, pure Empty)
->                          , (1, pure (ReadFail (userError "bug")))
+>                          , (1, pure (ReadFail (userError "read threw exception")))
 >                          , (1, pure ReadSlow)
 >                          ]
 
@@ -413,37 +413,31 @@ branch on, say, a command-line flag in order to determine which queue
 implementation to use, e.g. the real queue for "production" deployment and the
 fake one with faults for a "testing" deployment.
 
-> withFaultyQueueService :: (Manager -> IORef (Maybe Fault) -> IO ()) -> IO ()
-> withFaultyQueueService io = do
+> withFaultyQueueService :: Bug -> (Manager -> IORef (Maybe Fault) -> IO ()) -> IO ()
+> withFaultyQueueService bug io = do
 >   queue <- faultyFakeQueue mAX_QUEUE_SIZE
 >   mgr   <- newManager defaultManagerSettings
 >              { managerResponseTimeout = responseTimeoutMicro (10_000_000) } -- 10s
->   withService (ffqQueue queue) (io mgr (ffqFault queue))
-
-> withFakeQueueService :: (Manager -> IO ()) -> IO ()
-> withFakeQueueService io = do
->   queue <- fakeQueue mAX_QUEUE_SIZE
->   mgr   <- newManager defaultManagerSettings
->   withService queue (io mgr)
+>   withService bug (ffqQueue queue) (io mgr (ffqFault queue))
 
 > withRealQueueService :: (Manager -> IO ()) -> IO ()
 > withRealQueueService io = do
 >   queue <- realQueue mAX_QUEUE_SIZE
 >   mgr   <- newManager defaultManagerSettings
->   withService queue (io mgr)
+>   withService NoBug queue (io mgr)
 
 Finally we can write our sequential integratin tests with a fake and possibly
 faulty queue.
 
-> unit_seqIntegrationTests :: IO ()
-> unit_seqIntegrationTests =
->   withFaultyQueueService (\mgr ref -> quickCheck (prop_seqIntegrationTests ref mgr))
+> unit_seqIntegrationTests :: Bug -> IO ()
+> unit_seqIntegrationTests bug =
+>   withFaultyQueueService bug (\mgr ref -> quickCheck (prop_seqIntegrationTests ref mgr))
 
 Regression tests can be added similarly to before.
 
-> assertProgram :: String -> Program -> Assertion
-> assertProgram msg prog =
->   withFaultyQueueService $ \mgr ref -> do
+> assertProgram :: Bug -> String -> Program -> Assertion
+> assertProgram bug msg prog =
+>   withFaultyQueueService bug $ \mgr ref -> do
 >     let m = initModel
 >     r <- runProgram ref mgr m prog
 >     assertBool msg (isRight r)
@@ -549,21 +543,49 @@ The concurrent property should look familiar as well.
 And again, because the property assumes that the web service is running, so we
 stand the service up first.
 
-> unit_concIntegrationTests :: IO ()
-> unit_concIntegrationTests = do
+> unit_concIntegrationTests :: Bug -> IO ()
+> unit_concIntegrationTests bug = do
 >   -- NOTE: fake queue is used here, justified by previous contract testing.
 >   ffq <- faultyFakeQueue mAX_QUEUE_SIZE
 >   mgr <- newManager defaultManagerSettings
->   withService (ffqQueue ffq) (quickCheck (prop_concIntegrationTests (ffqFault ffq) mgr))
+>   withService bug (ffqQueue ffq) (quickCheck (prop_concIntegrationTests (ffqFault ffq) mgr))
 
 Demo script
 -----------
 
+Recall the `Full` fault that causes writes to the queue to fail even though
+there's capacity left in the queue. `IgnoreCheckingIfEnqueueSucceeded`
+introduces a bug related to not checking if writes to the queue succeeds (in
+`Part03.Service.httpFrontEnd`):
+
 ```
-  > test_injectFullFault
-  > unit_seqIntegrationTest
-  > -- Uncomment BUGs in `Part03.Service` module and show how the sequential property catches them.
-  > unit_concIntegrationTests
+  > unit_seqIntegrationTests IgnoreCheckingIfEnqueueSucceeded
+  *** Failed! Falsified (after 17 tests and 3 shrinks):
+  Program {unProgram = [InjectFault Full,ClientRequest (WriteReq "foo")]}
+```
+
+`ReadFail` injects a fault that makes reading from the queue throw an error,
+`DontCatchDequeueError` introduces a bug where that failure isn't caught (in
+`Part03.Service.worker`):
+
+```
+  > unit_seqIntegrationTests DontCatchDequeueError
+  *** Exception: ExceptionInLinkedThread (ThreadId 653) user error (read threw exception)
+```
+
+The `SlowRead` fault introduces a sleep when reading from the queue, if our web
+services has a too short worker timeout then we might timeout that client
+request just because the read was a bit slow `TooShortWorkerTimeout` introduces
+that bug (in `Part03.Service.httpFrontend`):
+
+```
+  unit_seqIntegrationTests TooShortWorkerTimeout
+  *** Failed! Falsified (after 9 tests and 3 shrinks):
+  Program {unProgram = [InjectFault ReadSlow,ClientRequest (WriteReq "foo")]}
+```
+
+```
+  > unit_concIntegrationTests NoBug
 ```
 
 Discussion
