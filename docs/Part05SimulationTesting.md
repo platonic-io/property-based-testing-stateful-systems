@@ -20,15 +20,15 @@ So in this part we’ll have a look at how FoundationDB is tested.
 
 ## Plan
 
--   Treat networking and time as “dependencies”, but them behind interfaces and implement a fake for them (similar to how we did in [part 3](./Part03SMContractTesting.md));
+We’ve already noted that injecting network faults is difficult in the setup we saw previously. Another problem is: even if we could somehow inject a fault that caused, say, a message to be dropped, we’d still need to wait for the associated timeout and send retry. Retry timeouts can sometimes take several seconds, so if we have many network faults our tests would get very slow (Jepsen has this problem as well).
 
--   Simulate a network of components by connecting the fakes and let them communicate with each other;
+So here’s an idea: what if we treated networking and time as “dependencies”, and put them behind interfaces and implement a fake for them similar to how we did in [part 3](./Part03SMContractTesting.md#readme) and [part 4](./Part04FaultInjection.md#readme)?
 
--   The fake time is advanced discretely based on when messages arrive rather with a real clock, that way we don’t have to wait for timeouts to happen;
+This would allow us to simulate a network of components by connecting the fakes and let them “communicate” with each other. The fake time could be advanced discretely based on when messages arrive rather with a real clock, that way we don’t have to wait for timeouts to happen.
 
--   Collect a concurrent history from the client request perspective and check if it linerises (like in [part 2](./Part02ConcurrentSMTesting.md));
+While the software/system under test (SUT) is running in our simulator we hit it with client requests and collect a concurrent history, after the simulation is done we check if the history linearises (like in [part 2](./Part02ConcurrentSMTesting.md#readme)). Other global assertions on the state of the whole system are also possible.
 
--   Write a time-travelling debugger that lets us step through the history of messages and view how the state of each state machine evolves over time.
+To make debugging easier we’ll also write a time-travelling debugger that lets us step through the history of messages and view how the state of each state machine evolves over time.
 
 ## How it works
 
@@ -83,9 +83,7 @@ import Part05.EventLoop ()
     >
     > 3.  Through successive repetitions of this process of interlaced testing and design the model ultimately becomes the software system itself. I think that it is the key of the approach that has been suggested, that there is no such question as testing things after the fact with simulation models, but that in effect the testing and the replacement of simulations with modules that are deeper and more detailed goes on with the simulation model controlling, as it were, the place and order in which these things are done.”
 
-    -   The idea in its current shape and as applied to distributed systems was introduced(?), or at the very least popularised, by Will Wilson’s talk [*Testing Distributed Systems w/ Deterministic Simulation*](https://www.youtube.com/watch?v=4fFDFbi3toc) at Strange Loop
-
-        2014) about how they used [simulation testing](https://apple.github.io/foundationdb/testing.html) to test [FoundationDB](https://www.foundationdb.org/) (so well that Kyle “aphyr” Kingsbury didn’t feel it was [worth](https://twitter.com/aphyr/status/405017101804396546) Jepsen testing it).
+    -   The idea in its current shape and as applied to distributed systems was introduced(?), or at the very least popularised, by Will Wilson’s talk [*Testing Distributed Systems w/ Deterministic Simulation*](https://www.youtube.com/watch?v=4fFDFbi3toc) at Strange Loop (2014) about how they used [simulation testing](https://apple.github.io/foundationdb/testing.html) to test [FoundationDB](https://www.foundationdb.org/) (so well that Kyle “aphyr” Kingsbury didn’t feel it was [worth](https://twitter.com/aphyr/status/405017101804396546) Jepsen testing it).
 
         Watching the talk and rereading the Perlis quote makes one wonder: was the technique independently rediscovered, or had they in fact read the (in)famous 1968 NATO software engineering report?
 
