@@ -718,6 +718,10 @@ See also
   Cheap because it's less work, dirty because it litters the (production) code
   with fail points (our fail points are hidden in the fake);
 
+- Erlang's "let it crash" philosopy (see p. 107 in Joe Armstrong's
+  [thesis](http://www.diva-portal.org/smash/record.jsf?pid=diva2%3A9492&dswid=1026))
+  and their [supervisor trees](https://learnyousomeerlang.com/supervisors);
+
 - Richard Cook's talk ["How Complex Systems
   Fail"](https://www.youtube.com/watch?v=2S0k12uZR14) (2012) and his
   [summary](https://how.complexsystems.fail/);

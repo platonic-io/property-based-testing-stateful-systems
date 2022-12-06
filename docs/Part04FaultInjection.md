@@ -640,6 +640,8 @@ There are many things related to fault injection that we don’t know how to do 
 
 -   The [`failpoint`](https://github.com/pingcap/failpoint) Go library allows us to insert failures at any point in our code, in some way this is a cheap-and-dirty way of achiving the same thing as we’ve done in this part. Cheap because it’s less work, dirty because it litters the (production) code with fail points (our fail points are hidden in the fake);
 
+-   Erlang’s “let it crash” philosopy (see p. 107 in Joe Armstrong’s [thesis](http://www.diva-portal.org/smash/record.jsf?pid=diva2%3A9492&dswid=1026)) and their [supervisor trees](https://learnyousomeerlang.com/supervisors);
+
 -   Richard Cook’s talk [“How Complex Systems Fail”](https://www.youtube.com/watch?v=2S0k12uZR14) (2012) and his [summary](https://how.complexsystems.fail/);
 
 -   [Nancy Leveson](http://sunnyday.mit.edu/)’s work on [STAMP](https://stamp-consulting.com/what-is-stamp/) and her book [“Engineering a Safer World: Systems Thinking Applied to Safety”](https://direct.mit.edu/books/book/2908/Engineering-a-Safer-WorldSystems-Thinking-Applied) (2012);
