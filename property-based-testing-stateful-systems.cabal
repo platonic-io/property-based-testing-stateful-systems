@@ -24,10 +24,10 @@ extra-source-files:
   LICENSE
   README.md
 
-tested-with:        GHC ==9.2.5
+tested-with:        GHC ==9.0.2
 
 library
-  build-depends:    base ==4.16.4.0
+  build-depends:    base ==4.15.1.0
   hs-source-dirs:   src
 
   -- GHC boot library dependencies:
