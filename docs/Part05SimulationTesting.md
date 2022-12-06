@@ -6,11 +6,17 @@
 
 ## Motivation
 
--   “haven’t tested foundation\[db\] in part because their testing appears to be waaaay more rigorous than mine.” – Kyle [“aphyr”](https://twitter.com/aphyr/status/405017101804396546) Kingsbury
+For many systems the combination of integration tests and (consumer-driven) contract tests together with smoke tests should yield a test-suite with “good enough” coverage.
 
--   [“Jepsen-proof engineering”](https://sled.rs/simulation.html)
+Fault tolerant distributed systems, such as for example distributed databases, are perhaps an exception to the above rule of thumb. The reason for this is that networking faults (e.g. partitions or packet loss), which these systems are supposed to be tolerant against, are difficult to inject even if we have fakes for all dependencies and follow the steps we did [previously](./Part04FaultInjection.md#readme).
 
--   “Everyone knows that debugging is twice as hard as writing a program in the first place.” – Brian Kernighan
+In a sense this is witnessed by the effectiveness of [Jepsen](https://github.com/jepsen-io/jepsen#jepsen) when testing distributed databases, where injecting network faults plays a big part. Given Jepsen’s [success](https://jepsen.io/analyses) of finding bugs in pretty much every distributed database it has been pointed at, it’s interesting to ask: which distributed databases passed the Jepsen test and what kind of testing did they do in order to do so?
+
+The perhaps most famous example is [FoundationDB](https://www.foundationdb.org/). When Kyle “aphyr” Kingsbury was asked if he was planning on Jepsen testing FoundationDB soon, he [replied](https://twitter.com/aphyr/status/405017101804396546):
+
+> “haven’t tested foundation\[db\] in part because their testing appears to be waaaay more rigorous than mine.”
+
+So in this part we’ll have a look at how FoundationDB is tested.
 
 ## Plan
 
@@ -142,10 +148,11 @@ import Part05.EventLoop ()
 
 -   Can we package up this type of testing in a library suitable for a big class of (distributed) systems? Perhaps in a language agnostic way? So far it seems that all simulation testing practitioners are implementing their own custom solutions;
 
--   Can we make the event loop performant while keeping the test- and debuggability that we get from determinism and command sourcing? Perhaps borrowing ideas form LMAX’s [disruptor](https://github.com/symbiont-io/hs-disruptor/), [io_uring](https://lwn.net/Articles/776703/), and [zero-copy](https://en.wikipedia.org/wiki/Zero-copy) techniques?
+-   Can we make the event loop performant while keeping the test- and debuggability that we get from determinism and command sourcing? Perhaps borrowing ideas form LMAX’s [disruptor](https://github.com/symbiont-io/hs-disruptor/), [io_uring](https://lwn.net/Articles/776703/), and [zero-copy](https://en.wikipedia.org/wiki/Zero-copy) techniques? See the [tigerbeetle database](https://github.com/tigerbeetledb/tigerbeetle) for a lot of inspiration in this general [direction](https://tigerbeetle.com/blog/a-friendly-abstraction-over-iouring-and-kqueue/).
 
 ## See also
 
+-   [“Jepsen-proof engineering”](https://sled.rs/simulation.html) by Tyler Neely;
 -   The [P](https://github.com/p-org/P) programming language;
 -   [Maelstrom](https://github.com/jepsen-io/maelstrom);
 -   [stateright](https://github.com/stateright/stateright).
