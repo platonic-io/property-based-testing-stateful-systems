@@ -33,7 +33,7 @@ data FailureMode
 data Operation' cmd resp
   = Invoke Pid cmd
   | Ok     Pid resp
-  | Fail   Pid FailureMode -- should this has a cmd?
+  | Fail   Pid FailureMode (Maybe String {- the reason for failure if it exists -}) -- should this has a cmd?
   deriving stock (Show, Functor, Foldable)
 
 type Operation = Operation' Command Response
@@ -56,8 +56,8 @@ isValidConcurrentHistory (History xs) = go [] [] xs
         | pid `elem` infoPids -> Left $ show pid ++ " have already returned an INFO and shouldn't make any more comands. But we see an INVOKE."
         | otherwise -> go (pid:runningPids) infoPids ops
       Ok pid _ -> go (filter (/= pid) runningPids) infoPids ops
-      Fail pid FAIL -> go (filter (/= pid) runningPids) infoPids ops
-      Fail pid INFO -> go (filter (/= pid) runningPids) (pid:infoPids) ops
+      Fail pid FAIL _reason -> go (filter (/= pid) runningPids) infoPids ops
+      Fail pid INFO _reason -> go (filter (/= pid) runningPids) (pid:infoPids) ops
 
 interleavings :: History' cmd resp -> Forest (cmd, Result resp)
 interleavings (History [])  = []
@@ -77,12 +77,12 @@ interleavings (History ops0) =
     takeInvocations []                         = []
     takeInvocations ((Invoke pid cmd)   : ops) = (pid, cmd) : takeInvocations ops
     takeInvocations ((Ok    _pid _resp) : _)   = []
-    takeInvocations ((Fail _pid _mode) : ops)  = takeInvocations ops
+    takeInvocations ((Fail _pid _mode _reason) : ops)  = takeInvocations ops
 
     findResponse :: Pid -> [Operation' cmd resp] -> [(Result resp, [Operation' cmd resp])]
     findResponse _pid []                                   = []
     findResponse  pid ((Ok pid' resp) : ops) | pid == pid' = [(OkWithResponse resp, ops)]
-    findResponse  pid ((Fail pid' mode) : ops)
+    findResponse  pid ((Fail pid' mode _reason) : ops)
       | pid == pid' = case mode of
           FAIL -> []
           INFO -> [(OkWithNoResponse, ops)]
@@ -131,7 +131,7 @@ example = History
   , Invoke p2 "B"
   , Invoke p1 "C"
   , Ok p0 "RA"
-  , Fail p2 INFO
+  , Fail p2 INFO (Just "timeout")
   , Invoke p0 "D"
   , Ok p1 "RC"
   , Ok p0 "RD"
@@ -198,11 +198,11 @@ genHistory step0 model0 genC nrOfNewPids pids0 = sized $ go [] [] model0 (zip pi
             )]
       CommitedRequest _cmd mresp -> do
         let op = case mresp of
-              Nothing -> Fail pid INFO
+              Nothing -> Fail pid INFO Nothing
               Just resp-> Ok pid resp
         return (op:conc, linear, model, fmap (const DoingNothing) mresp, False)
       FailedRequest _cmd ->
-        return (Fail pid INFO:conc, linear, model, Nothing, False)
+        return (Fail pid INFO Nothing :conc, linear, model, Nothing, False)
 
     go conc linear _model []   _npid _size = pure (History $ reverse conc, reverse linear)
     go conc linear  model pids  npid  size = do

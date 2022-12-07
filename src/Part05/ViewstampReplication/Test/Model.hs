@@ -29,13 +29,13 @@ markFailure (Part4.History ops) = Part4.History (finishClients [] $ map go ops)
   where
     go i@Part4.Invoke{} = i
     go f@Part4.Fail{} = f
-    go (Part4.Ok p VROnlyOneInflightAllowed{}) = Part4.Fail p Part4.FAIL
+    go (Part4.Ok p VROnlyOneInflightAllowed{}) = Part4.Fail p Part4.FAIL (Just "Only one inflight allowed")
     go o@Part4.Ok{} = o
 
     remove x = filter (/= x)
 
-    finishClients ps [] = [ Part4.Fail p Part4.FAIL | p <- ps]
+    finishClients ps [] = [ Part4.Fail p Part4.FAIL (Just "simulation finished before response came") | p <- ps]
     finishClients ps (op:h) = case op of
       Part4.Invoke p _ -> op : finishClients (p:ps) h
       Part4.Ok p _ -> op : finishClients (remove p ps) h
-      Part4.Fail p _ -> op : finishClients (remove p ps) h
+      Part4.Fail p _ _ -> op : finishClients (remove p ps) h
