@@ -110,7 +110,7 @@ v′; if several messages have the same v′ it selects
 the one among them with the largest n.
 -}
 addDoViewChange :: ViewNumber -> NodeId -> Log o -> ViewNumber -> OpNumber -> CommitNumber
-  -> VR s o r (Int, Log o, OpNumber, CommitNumber)
+  -> VR s o r (Int, Log o, ViewNumber, OpNumber, CommitNumber)
 addDoViewChange v from l v' n k = do
   let
     first = (Set.singleton from, l, v', n, k)
@@ -125,7 +125,7 @@ addDoViewChange v from l v' n k = do
   m <- doViewChangeResponses.at v <%= Just . maybe first upd
   case m of
     Nothing -> error "IMPOSSIBLE"
-    Just (s, hl, _, hn, hk) -> return (Set.size s, hl, hn, hk)
+    Just (s, hl, hv, hn, hk) -> return (Set.size s, hl, hv, hn, hk)
 
 addRecoveryResponse :: Nonce -> NodeId -> VR s o r Int
 addRecoveryResponse x from = do
@@ -137,12 +137,16 @@ pickLatest p@(PrimaryRecoveryResponse _l _o k) p'@(PrimaryRecoveryResponse _l' _
   | k <= k' = p'
   | otherwise = p
 
-findClientInfoForOp :: OpNumber -> VR s o r (ClientId, RequestNumber)
+findClientInfoForOp :: OpNumber -> VR s o r (Maybe (ClientId, RequestNumber))
 findClientInfoForOp on = use $
   clientTable
   .to (Map.filter (\cs -> copNumber cs == on))
-  .to Map.findMin
-  .to (fmap requestNumber)
+  .to (filterMaybe $ not . Map.null)
+  .to (fmap Map.findMin)
+  .to (fmap (fmap requestNumber))
+  where filterMaybe p x
+          | p x = Just x
+          | otherwise = Nothing
 
 initViewChange :: VR s o r ()
 initViewChange = do
@@ -199,8 +203,11 @@ executeUpToOrBeginStateTransfer v k = do
       Nothing -> initStateTransfer
       Just op -> do
         result <- executeReplicatedMachine op
-        (theClientId, theRequestNumber) <- findClientInfoForOp o
-        clientTable.at theClientId .= Just (Completed theRequestNumber o result v)
+        clientInfo <- findClientInfoForOp o
+        case clientInfo of
+          Nothing -> return ()
+          Just (theClientId, theRequestNumber) ->
+            clientTable.at theClientId .= Just (Completed theRequestNumber o result v)
   commitNumber .= k
 
 executePrimary :: ViewNumber -> OpNumber -> VR s o r ()
@@ -217,10 +224,13 @@ executePrimary v (OpNumber commitTo) = do
       Just op -> do
         -- TODO: maybe we can't execute this one yet, or we can execute more
         result <- executeReplicatedMachine op
-        (theClientId, theRequestNumber) <- findClientInfoForOp o
-        clientTable.at theClientId .= Just (Completed theRequestNumber o result v)
-        -- TODO: should we gc primaryPrepareOk?
-        respond theClientId (VRReply v theRequestNumber result)
+        clientInfo <- findClientInfoForOp o
+        case clientInfo of
+          Nothing -> return () -- TODO should we fail here?
+          Just (theClientId, theRequestNumber) -> do
+            clientTable.at theClientId .= Just (Completed theRequestNumber o result v)
+            -- TODO: should we gc primaryPrepareOk?
+            respond theClientId (VRReply v theRequestNumber result)
   commitNumber .= CommitNumber commitTo
 
 {- 4.1 Normal Operation
@@ -323,8 +333,8 @@ mary to indicate that this operation and all earlier
 ones have prepared locally.
     -}
     myOp <- use opNumber
-    when (succ myOp /= n) ereturn -- we only process messages in order
     executeUpToOrBeginStateTransfer v k
+    when (succ myOp /= n) ereturn -- we only process messages in order
     opNumber .= n
     theLog %= (|> (m^.operation))
     clientTable.at (m^.clientId) .= Just (InFlight (m^.clientRequestNumber) n)
@@ -424,12 +434,12 @@ also executes (in order) any committed operations
 that it hadn’t executed previously, updates its client
 table, and sends the replies to the clients.
 -}
-    (howMany, highestLog, highestN, highestCommit) <- addDoViewChange v i l v' n k
+    (howMany, highestLog, highestV, highestN, highestCommit) <- addDoViewChange v i l v' n k
     isQ <- isQuorum howMany
     if isQ
       then do
         currentStatus .= Normal
-        currentViewNumber .= v
+        currentViewNumber .= highestV
         theLog .= highestLog
         opNumber .= highestN
         broadCastReplicas $ StartView v highestLog highestN highestCommit
