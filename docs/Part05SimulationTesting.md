@@ -50,10 +50,109 @@ To make debugging easier we’ll also write a time-travelling debugger that lets
 
 ## Code
 
+<!---
+
+> module Part05SimulationTesting () where
+
+-->
+
+-   Let’s start with the state machine (SM) type
+-   A bit more complex what we’ve seen previously
+    -   input and output types are parameters so that applications with different message types can written
+    -   inputs are split into client requests (synchronous) and internal messages (asynchrous)
+    -   a step in the SM can returns several outputs, this is useful for broadcasting
+    -   outputs can also set and reset timers, which is necessary for implementing retry logic
+    -   when the timers expire the event loop will call the SM’s timeout handler (`smTimeout`)
+    -   in addition to the state we also thread through a seed, `StdGen`, so that the SM can generate random numbers
+    -   there’s also an initisation step (`smInit`) to set up the SM before it’s put to work
+
 ``` haskell
-module Part05SimulationTesting () where
+import Part05.StateMachine ()
+```
+
+-   In order to make it more ergonomic to write SMs we introduce a domain-specific language (DSL) for it
+
+-   The DSL allows us to use do syntax, do `send`s or register timers anywhere rather than return a list outputs, as well as add pre-conditions via guards and do early returns
+
+``` haskell
+import Part05.StateMachineDSL ()
+```
+
+-   The SMs are, as mentioned previously, parametrised by their input and output messages.
+
+-   These parameters will most likely be instantiated with concrete (record-like) datatypes.
+
+-   Network traffic from clients and other nodes in the network will come in as bytes though, so we need a way to decode inputs from bytes and a way to encode outputs as bytes.
+
+-   `Codec`s are used to specify these convertions:
+
+``` haskell
+import Part05.Codec ()
+```
+
+-   A SM together with its codec constitutes an application and it’s what’s expected from the user
+-   Several SM and codec pairs together form a `Configuration`
+-   The event loop expects a configuration at start up
+
+``` haskell
+import Part05.Configuration ()
+```
+
+-   We’ve covered what the user needs to provide in order to run an application on top of the event loop, next lets have a look at what the event loop provides
+
+-   There are three types of events, network inputs (from client requests or from other nodes in the network), timer events (triggered when timers expire), and commands (think of this as admin commands that are sent directly to the event loop, currently there’s only a exit command which makes the event loop stop running)
+
+``` haskell
+import Part05.Event ()
+```
+
+-   How are these events created? Depends on how the event loop is deployed: in production or simulation mode
+
+``` haskell
+import Part05.Deployment ()
+```
+
+-   XXX: network events in production…
+-   XXX: network events in simulation…
+
+``` haskell
+import Part05.Network ()
+```
+
+-   XXX: timer events in production…
+-   XXX: timer events in simulation…
+
+``` haskell
+import Part05.TimerWheel ()
+```
+
+-   These events get queued up, and thus an order established, by the event loop
+    -   XXX: production
+    -   XXX: simulation
+
+``` haskell
+import Part05.EventQueue ()
+import Part05.AwaitingClients ()
+import Part05.Agenda ()
+```
+
+-   Now we have all bits to implement the event loop itself
+
+``` haskell
 import Part05.EventLoop ()
 ```
+
+-   Last bits needed for simulation testing: generate traffic, collect concurrent history, debug errors:
+
+``` haskell
+import Part05.ClientGenerator ()
+import Part05.History ()
+import Part05.Debug ()
+```
+
+-   Finally lets put all this together and develop and simulation test [Viewstamped replication](https://dspace.mit.edu/handle/1721.1/71763) by Barbra Liskov and James Cowling (2012)
+
+XXX: Viewstamp replication example…
 
 ## Discussion
 
@@ -63,7 +162,7 @@ import Part05.EventLoop ()
 
     -   Even though we tried to minimise difference between “production” and simulation testing deployment there’s always going to be a gap between the two where bugs might sneak in;
 
-    -   Are our faults realistic and complete? A good source for inspiration for faults is Deutsch’s [fallacies of distributed computing](https://en.wikipedia.org/wiki/Fallacies_of_distributed_computing). Jepsen’s list of nemesis, the Chaos engineering communties faults and FoundationDB’s simulator’s faults are other good sources;
+    -   Are our faults realistic and complete? A good source for inspiration for faults is Deutsch’s [fallacies of distributed computing](https://en.wikipedia.org/wiki/Fallacies_of_distributed_computing). Jepsen’s list of [nemesis](https://github.com/jepsen-io/jepsen/blob/e7446a44c06bdc7996f989d1e8c39624c697c82a/jepsen/src/jepsen/nemesis/combined.clj#L507), the Chaos engineering communties [faults](https://medium.com/the-cloud-architect/chaos-engineering-part-3-61579e41edd8) and FoundationDB’s simulator’s [faults](https://apple.github.io/foundationdb/testing.html) are other good sources;
 
     -   Are we subconsciously training users of the simulation tests to beat it? See relevant part of Will Wilson’s [talk](https://youtu.be/4fFDFbi3toc?t=2164).
 
