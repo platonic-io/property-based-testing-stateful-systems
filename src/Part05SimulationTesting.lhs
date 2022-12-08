@@ -183,13 +183,26 @@ Code
 
 > import Part05.Deployment ()
 
-* XXX: network events in production...
-* XXX: network events in simulation...
+* Network events in a production deployment are created when requests come in on http server
+  - Client request use POST
+  - Internal messages use PUT
+
+  - since client requests are synchronous, the http server puts the client
+    request on the event queue and waits for the single threaded worker to
+    create a response to the client request...
+
+* network events in a simulation deployment are created by the simulation itself, rather than from external requests
+  - Agenda = priority queue of events
 
 > import Part05.Network ()
+> import Part05.AwaitingClients ()
+> import Part05.Agenda ()
 
-* XXX: timer events in production...
-* XXX: timer events in simulation...
+* Timers are registerd by the state machines, and when they expire the event loop creates a timer event for the SM that created it
+* This is the same for both production and simulation deployments
+* The difference is that in production a real clock is used to check if the
+  timer has expired, while in simulation time is advanced discretely when an
+  event is popped from the event queue
 
 > import Part05.TimerWheel ()
 
@@ -198,8 +211,6 @@ Code
   - XXX: simulation
 
 > import Part05.EventQueue ()
-> import Part05.AwaitingClients ()
-> import Part05.Agenda ()
 
 * Now we have all bits to implement the event loop itself
 
@@ -220,6 +231,27 @@ XXX: Viewstamp replication example...
 
 Discussion
 ----------
+
+- Q: This is a lot of code that's unrelated to the application that I want to
+     write, is it worth the effort?
+
+  A: Ideally much of it can be packaged up and reused among applications. But
+     even if you end up having to write everything yourself, perhaps because
+     nobody else has yet done it in your programming language of choice, it's
+     probably worth it if you want to pass the Jepsen test (and more
+     importantly: that you keep passing it as you change your code).
+
+     - XXX: [Tigerbeetle talk](https://www.youtube.com/watch?v=FyGukn77gqA):
+           "favorite aspect", "increase dev velocity"
+
+     - XXX: "don't trust a consensus algorithm that is less that 2 years old,
+       simulation tesitng speeds that time up"
+
+- Q: Writing the application on state machine form, even with the DSL, seems
+     restrictive?
+
+  A: Yes, it's only by enforcing this structure on the application that we are
+     able to exploit it later in the testing phase.
 
 - What are the risks of simulation testing being wrong somehow?
 
@@ -420,6 +452,10 @@ Exercises
 Problems
 --------
 
+- Can we make a better DSL for expressing state machines that feels less clunky
+  and is more expressive? How can we add asynchronous filesystem I/O, together
+  with the appropriate fault injection, for example?
+
 - How can we effectively explore the state space? Can we avoid exploring
   previously explored paths on subsequent test invocations? Can we exploit
   symmetries in the state space? E.g. if `set x 1 || set x 1` happen in parallel
@@ -428,8 +464,7 @@ Problems
 - Related to the above, and already touched upon in part 4: how can we
   effectively inject faults? Is random good enough or can we be more smart about
   it? C.f. [lineage-driven fault
-  injection](https://dl.acm.org/doi/10.1145/2723372.2723711) by Alvaro et al
-  (2015);
+  injection](https://dl.acm.org/doi/10.1145/2723372.2723711) by Alvaro et al (2015);
 
 - Can we package up this type of testing in a library suitable for a big class
   of (distributed) systems? Perhaps in a language agnostic way? So far it seems
@@ -442,7 +477,7 @@ Problems
   [disruptor](https://github.com/symbiont-io/hs-disruptor/),
   [io_uring](https://lwn.net/Articles/776703/), and
   [zero-copy](https://en.wikipedia.org/wiki/Zero-copy) techniques? See the
-  [tigerbeetle database](https://github.com/tigerbeetledb/tigerbeetle) for a lot
+  [TigerBeetle](https://github.com/tigerbeetledb/tigerbeetle) database for a lot
   of inspiration in this general
   [direction](https://tigerbeetle.com/blog/a-friendly-abstraction-over-iouring-and-kqueue/).
 
