@@ -511,8 +511,8 @@ concExec ref mgr hist cmd = do
   res <- exec cmd ref mgr
   case res of
     ROk resp -> appendHistory hist (Ok pid (Just resp))
-    RFail    -> appendHistory hist (Fail pid FAIL)
-    RInfo    -> appendHistory hist (Fail pid INFO)
+    RFail    -> appendHistory hist (Fail pid FAIL Nothing)
+    RInfo    -> appendHistory hist (Fail pid INFO Nothing)
     RNemesis -> appendHistory hist (Ok pid Nothing)
 ```
 
