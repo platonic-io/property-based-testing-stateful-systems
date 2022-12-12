@@ -334,8 +334,8 @@ Discussion
      The idea in its current shape and as applied to distributed systems was
      introduced(?), or at the very least popularised, by Will Wilson's talk
      [*Testing Distributed Systems w/ Deterministic
-     Simulation*](https://www.youtube.com/watch?v=4fFDFbi3toc) at Strange Loop
-     (2014) about how they used [simulation
+     Simulation*](https://www.youtube.com/watch?v=4fFDFbi3toc) at Strange Loop (2014)
+     about how they used [simulation
      testing](https://apple.github.io/foundationdb/testing.html) to test
      [FoundationDB](https://www.foundationdb.org/) (so well that Kyle "aphyr"
      Kingsbury didn't feel it was
@@ -363,8 +363,8 @@ Discussion
 
      Three Amazon Web Services (AWS) engineers recently published a paper called
      [Millions of Tiny
-     Databases](https://www.usenix.org/conference/nsdi20/presentation/brooker)
-     (2020) where they say:
+     Databases](https://www.usenix.org/conference/nsdi20/presentation/brooker) (2020)
+     where they say:
 
    > "To solve this problem [testing distributed systems], we picked an approach that
    > is in wide use at Amazon Web Services, which we would like to see broadly
