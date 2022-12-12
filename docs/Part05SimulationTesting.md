@@ -205,9 +205,7 @@ XXX: Viewstamp replication example…
     >
     > 3.  Through successive repetitions of this process of interlaced testing and design the model ultimately becomes the software system itself. I think that it is the key of the approach that has been suggested, that there is no such question as testing things after the fact with simulation models, but that in effect the testing and the replacement of simulations with modules that are deeper and more detailed goes on with the simulation model controlling, as it were, the place and order in which these things are done.”
 
-    The idea in its current shape and as applied to distributed systems was introduced(?), or at the very least popularised, by Will Wilson’s talk [*Testing Distributed Systems w/ Deterministic Simulation*](https://www.youtube.com/watch?v=4fFDFbi3toc) at Strange Loop
-
-    2014) about how they used [simulation testing](https://apple.github.io/foundationdb/testing.html) to test [FoundationDB](https://www.foundationdb.org/) (so well that Kyle “aphyr” Kingsbury didn’t feel it was [worth](https://twitter.com/aphyr/status/405017101804396546) Jepsen testing it) as mentioned in the motivation section.
+    The idea in its current shape and as applied to distributed systems was introduced(?), or at the very least popularised, by Will Wilson’s talk [*Testing Distributed Systems w/ Deterministic Simulation*](https://www.youtube.com/watch?v=4fFDFbi3toc) at Strange Loop (2014) about how they used [simulation testing](https://apple.github.io/foundationdb/testing.html) to test [FoundationDB](https://www.foundationdb.org/) (so well that Kyle “aphyr” Kingsbury didn’t feel it was [worth](https://twitter.com/aphyr/status/405017101804396546) Jepsen testing it) as mentioned in the motivation section.
 
     Watching the talk and rereading the Perlis quote makes one wonder: was the technique independently rediscovered, or had they in fact read the (in)famous 1968 NATO software engineering report?
 
@@ -215,9 +213,7 @@ XXX: Viewstamp replication example…
 
     [John Carmack](https://en.wikipedia.org/wiki/John_Carmack) wrote an interesting [.plan](https://raw.githubusercontent.com/ESWAT/john-carmack-plan-archive/master/by_day/johnc_plan_19981014.txt) about recoding and replaying events in the context of testing in 1998, and other [developers](http://ithare.com/testing-my-personal-take-on-testing-including-unit-testing-and-atddbdd/) in the the game industry are also advocating this technique.
 
-    Three Amazon Web Services (AWS) engineers recently published a paper called [Millions of Tiny Databases](https://www.usenix.org/conference/nsdi20/presentation/brooker)
-
-    2020) where they say:
+    Three Amazon Web Services (AWS) engineers recently published a paper called [Millions of Tiny Databases](https://www.usenix.org/conference/nsdi20/presentation/brooker) (2020) where they say:
 
     > “To solve this problem \[testing distributed systems\], we picked an approach that is in wide use at Amazon Web Services, which we would like to see broadly adopted: build a test harness which abstracts networking, performance, and other systems concepts (we call it a simworld). The goal of this approach is to allow developers to write distributed systems tests, including tests that simulate packet loss, server failures, corruption, and other failure cases, as unit tests in the same language as the system itself. In this case, these unit tests run inside the developer’s IDE (or with junit at build time), with no need for test clusters or other infrastructure. A typical test which tests correctness under packet loss can be implemented in less than 10 lines of Java code, and executes in less than 100ms. The Physalia team have written hundreds of such tests, far exceeding the coverage that would be practical in any cluster-based or container-based approach.
     >
