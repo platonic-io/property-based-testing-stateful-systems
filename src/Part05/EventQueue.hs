@@ -53,7 +53,8 @@ fakeEventQueue a0 clock clientGenerator = do
       a <- readIORef agenda
       now <- cGetCurrentTime clock
       ncr <- cgNextClientRequest clientGenerator
-      let allEvents = foldr (.) id
+      let allEvents :: Agenda' (IO Event)
+          allEvents = foldr (.) id
             [ case pop a of
                 Nothing -> id
                 Just ((time, event), a') -> push (time, writeIORef agenda a' >> return event)

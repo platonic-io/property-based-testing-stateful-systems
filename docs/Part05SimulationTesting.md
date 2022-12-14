@@ -24,21 +24,29 @@ We’ve already noted that injecting network faults is difficult in the setup we
 
 So here’s an idea: what if we treated networking and time as “dependencies”, and put them behind interfaces and implement a fake for them similar to how we did in [part 3](./Part03SMContractTesting.md#readme) and [part 4](./Part04FaultInjection.md#readme)?
 
-This would allow us to simulate a network of components by connecting the fakes and let them “communicate” with each other. The fake time could be advanced discretely based on when messages arrive rather with a real clock, that way we don’t have to wait for timeouts to happen.
+This would allow us to deterministically simulate a network of components by connecting the fakes and let them “communicate” with each other. The fake time could be advanced discretely based on when messages arrive rather with a real clock, that way we don’t have to wait for timeouts to happen.
 
 While the software/system under test (SUT) is running in our simulator we hit it with client requests and collect a concurrent history, after the simulation is done we check if the history linearises (like in [part 2](./Part02ConcurrentSMTesting.md#readme)). Other global assertions on the state of the whole system are also possible.
 
-To make debugging easier we’ll also write a time-travelling debugger that lets us step through the history of messages and view how the state of each state machine evolves over time.
+To make debugging easier we’ll also write a time-travelling debugger that lets us step through the history of messages and view how the state of each state machine evolves over time. The reason this works is because our system is deterministic, so we can record and replay the inputs of the system to recreate the system state at any point in time.
 
 A, perhaps, useful analogy here is that imagine if we are building an airplane, then we might do testing in a wind-tunnel. The wind-tunnel lets us speed up testing, e.g. we don’t have to sit around and wait for an actual hurricane to happen for us to test how the plane behaves in such a situation. Likewise our simulator can create worst case scenarios that would take years of real-world traffic to occur. When something bad happens we can inspect the airplane’s blackbox after the fact in order to reconstruct what might have caused the failure, this is what our debugger is supposed to be able to do.
 
 ## How it works
 
+Production deployment of event loop:
+
+<img src="../images/part5-real-event-loop.svg" width="600" />
+
+Simulation deployment of event loop:
+
+<img src="../images/part5-simulation-event-loop.svg" width="600" />
+
 -   Given that all the fakes our components are state machines of type `Input ->   State -> (State, Output)`, we can “glue” them together to form a network of components where the outputs of one component gets fed into the input of another and so on. This is particularly effective for distributed systems where we have N instances of the same component and they typically all talk to each other;
 
 -   Further note that since the networking part is already factored out of our state machines, all we need to do is to write an event loop which does the actual receiving and responding of messages and feeds it to the state machines. The picture looks something like this:
 
-    ![simulation event loop](../images/simulation-eventloop.svg)
+    ![](../images/simulation-eventloop.svg)
 
     where client requests (synchronously) and internal messages from other nodes in the network (potentially asynchronously) arrive at the event loop, get queued up and then dispatched to the state machine running on the event loop. After processing a message (the green arrow) the event loop updates the state of the state machine and sends out any replies.
 
@@ -127,7 +135,11 @@ import Part05.Deployment ()
 -   network events in a simulation deployment are created by the simulation itself, rather than from external requests
 
     -   Agenda = priority queue of events
-    -   network interface specifices how to send enqueues
+
+    -   network interface:
+
+             { nSend    :: NodeId -> NodeId -> ByteString -> IO ()
+             , nRespond :: ClientId -> ByteString -> IO () }
 
 ``` haskell
 import Part05.Network ()
@@ -146,6 +158,14 @@ import Part05.TimerWheel ()
 -   These events get queued up, and thus an order established, by the event loop
     -   XXX: production
     -   XXX: simulation
+    -   interface:
+
+    <!-- -->
+
+        data EventQueue = EventQueue
+          { eqEnqueue :: Event -> IO ()
+          , eqDequeue :: DequeueTimeout -> IO Event
+          }
 
 ``` haskell
 import Part05.EventQueue ()
@@ -221,7 +241,7 @@ XXX: Viewstamp replication example…
     >
     > Our implementation allows control down to the packet level, allowing testers to delay, duplicate or drop packets based on matching criteria. Similar capabilities are available to test disk IO. Perhaps the most important testing capability in a distributed database is time, where the framework allows each actor to have it’s own view of time arbitrarily controlled by the test. Simworld tests can even add Byzantine conditions like data corruption, and operational properties like high la- tency. We highly recommend this testing approach, and have continued to use it for new systems we build.”
 
-    [Dropbox](https://en.wikipedia.org/wiki/Dropbox) has written [several](https://dropbox.tech/infrastructure/rewriting-the-heart-of-our-sync-engine) [blog](https://lobste.rs/s/ob6a8z/rewriting_heart_our_sync_engine) [posts](ttps://dropbox.tech/infrastructure/-testing-our-new-sync-engine) related to simulation testing.
+    [Dropbox](https://en.wikipedia.org/wiki/Dropbox) has written [several](https://dropbox.tech/infrastructure/rewriting-the-heart-of-our-sync-engine) [blog](https://lobste.rs/s/ob6a8z/rewriting_heart_our_sync_engine) [posts](https://dropbox.tech/infrastructure/-testing-our-new-sync-engine) related to simulation testing.
 
     Basho’s [Riak](https://en.wikipedia.org/wiki/Riak) (a distributed NoSQL key-value data store that offers high availability, fault tolerance, operational simplicity, and scalability) also uses similar [techniques](https://speakerdeck.com/jtuple/hansei-property-based-development-of-concurrent-systems) for their testing.
 
