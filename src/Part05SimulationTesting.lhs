@@ -56,10 +56,10 @@ put them behind interfaces and implement a fake for them similar to how we did
 in [part 3](./Part03SMContractTesting.md#readme) and [part
 4](./Part04FaultInjection.md#readme)?
 
-This would allow us to simulate a network of components by connecting the fakes
-and let them "communicate" with each other. The fake time could be advanced
-discretely based on when messages arrive rather with a real clock, that way we
-don't have to wait for timeouts to happen.
+This would allow us to deterministically simulate a network of components by
+connecting the fakes and let them "communicate" with each other. The fake time
+could be advanced discretely based on when messages arrive rather with a real
+clock, that way we don't have to wait for timeouts to happen.
 
 While the software/system under test (SUT) is running in our simulator we hit it
 with client requests and collect a concurrent history, after the simulation is
@@ -69,7 +69,9 @@ of the whole system are also possible.
 
 To make debugging easier we'll also write a time-travelling debugger that lets
 us step through the history of messages and view how the state of each state
-machine evolves over time.
+machine evolves over time. The reason this works is because our system is
+deterministic, so we can record and replay the inputs of the system to recreate
+the system state at any point in time.
 
 A, perhaps, useful analogy here is that imagine if we are building an airplane,
 then we might do testing in a wind-tunnel. The wind-tunnel lets us speed up
@@ -83,6 +85,14 @@ failure, this is what our debugger is supposed to be able to do.
 How it works
 ------------
 
+Production deployment of event loop:
+
+  ![](../images/part5-real-event-loop.svg){ width=600px }
+
+Simulation deployment of event loop:
+
+  ![](../images/part5-simulation-event-loop.svg){ width=600px }
+
 - Given that all the fakes our components are state machines of type `Input ->
   State -> (State, Output)`, we can "glue" them together to form a network of
   components where the outputs of one component gets fed into the input of
@@ -95,7 +105,7 @@ How it works
   actual receiving and responding of messages and feeds it to the state
   machines. The picture looks something like this:
 
-  ![simulation event loop](../images/simulation-eventloop.svg)
+  ![](../images/simulation-eventloop.svg)
 
   where client requests (synchronously) and internal messages from other nodes
   in the network (potentially asynchronously) arrive at the event loop, get
@@ -206,7 +216,11 @@ Code
 
 * network events in a simulation deployment are created by the simulation itself, rather than from external requests
   - Agenda = priority queue of events
-  - network interface specifices how to send enqueues
+  - network interface:
+    ```
+     { nSend    :: NodeId -> NodeId -> ByteString -> IO ()
+     , nRespond :: ClientId -> ByteString -> IO () }
+    ```
 
 > import Part05.Network ()
 > import Part05.AwaitingClients ()
@@ -223,6 +237,13 @@ Code
 * These events get queued up, and thus an order established, by the event loop
   - XXX: production
   - XXX: simulation
+  - interface:
+  ```
+  data EventQueue = EventQueue
+    { eqEnqueue :: Event -> IO ()
+    , eqDequeue :: DequeueTimeout -> IO Event
+    }
+  ```
 
 > import Part05.EventQueue ()
 
@@ -402,7 +423,7 @@ Discussion
      [Dropbox](https://en.wikipedia.org/wiki/Dropbox) has written
      [several](https://dropbox.tech/infrastructure/rewriting-the-heart-of-our-sync-engine)
      [blog](https://lobste.rs/s/ob6a8z/rewriting_heart_our_sync_engine)
-     [posts](ttps://dropbox.tech/infrastructure/-testing-our-new-sync-engine)
+     [posts](https://dropbox.tech/infrastructure/-testing-our-new-sync-engine)
      related to simulation testing.
 
      Basho's [Riak](https://en.wikipedia.org/wiki/Riak) (a distributed NoSQL
