@@ -3,9 +3,9 @@ Simulation testing
 
 ![](../images/under_construction.gif)
 
-*While the overall structure and code will likely stay, there’s still more work
- needed to turn this part from a bullet point presentation into a readable
- text.*
+*The code section needs to be turned from a bullet point presentation into a
+ readable text. Before that can be done, we need the last pieces of code: the
+ example and possibly the debugger. The exercises needs to be revisted as well.*
 
 Motivation
 ----------
