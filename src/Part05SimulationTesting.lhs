@@ -39,7 +39,8 @@ asked if he was planning on Jepsen testing FoundationDB soon, he
  > "haven't tested foundation[db] in part because their testing appears to be
  > waaaay more rigorous than mine."
 
-So in this part we'll have a look at how FoundationDB is tested.
+So in this part we'll have a look at the technique that FoundationDB is tested
+with -- simulation testing.
 
 Plan
 ----
@@ -56,7 +57,7 @@ put them behind interfaces and implement a fake for them similar to how we did
 in [part 3](./Part03SMContractTesting.md#readme) and [part
 4](./Part04FaultInjection.md#readme)?
 
-This would allow us to deterministically simulate a network of components by
+This would allow us to deterministically _simulate_ a network of components by
 connecting the fakes and let them "communicate" with each other. The fake time
 could be advanced discretely based on when messages arrive rather with a real
 clock, that way we don't have to wait for timeouts to happen.
@@ -85,59 +86,148 @@ failure, this is what our debugger is supposed to be able to do.
 How it works
 ------------
 
-Production deployment of event loop:
+Imagine we want to write an distributed in-memory data store, where client
+requests can either write or read some data.
+
+For each client write there will be several internal messages between the nodes
+that make up the distributed network to ensure that enough nodes got a copy of
+the data, before a client response is sent in order to ensure that the data is
+"durable" (i.e. can be replicated in case some nodes crash). The picture looks
+something like this:
+
+  ![](../images/part5-data-store.svg){ width=500px }
+
+How can this be achieved? One way would be for the distributed network to elect
+a leader node and have all client requests go through it, the leader would then
+replicate the data to all other nodes and confirm enough nodes got it before
+responding to the client. In case the leader because unavailable, a new leader
+is elected. In case a node crashes, its state is restored after it restarts by
+the other nodes. That way as long as enough nodes are available and running we
+can keep serving client requests. We'll omit the exact details of how this is
+achieved or now, but hopefuly we've explained enough for it to be possilbe to
+appreciate that testing all possible corner cases related to those failure modes
+can be tricky.
+
+Next lets sketch how we can implement the data store nodes using state machines
+(SMs). First recall the type of our SMs:
+
+```haskell
+    Input -> State -> (State, Output)
+```
+
+Client requests and internal messages from other nodes in the network can be
+modelled as inputs, and client responses as well as outgoing messages to other
+nodes are the outputs, while the data store is part of the state.
+
+Note that if implemented this way the "business logic" of the data store is
+completely separated away from actually sending and receiving requests and
+messages over the network. This is key for being able to simulate the network,
+as we shall see later.
+
+How does the actual networking happen though? For the "real" / "production"
+deployment of the data store we start a HTTP server, where concurrent requests
+and messages can be sent to the data store, these network events get written to
+a FIFO queue which the SM processes one by one:
 
   ![](../images/part5-real-event-loop.svg){ width=600px }
 
-Simulation deployment of event loop:
+Sometimes when we send internal messages to other nodes they can be dropped by
+the network, in order to be able to implement retry logic we need to extend the
+basic functionality of SMs with some notion of being able to keep track of the
+passage of time. There are many ways to do this, for our particular application
+we'll choose timers. The way timers work is that SMs can register a timer as
+part of their output. Typically we'd do something like: send such and such
+message to such and such node and set a timer for 30s, if we don't hear back
+from the node within 30s and reset the timer, then a timer wheel process will
+enqueue a timer event which the SM can use for doing the retry.
+
+By the way, all this extra stuff that happens outside of the SM is packaged up
+in a componenet called the event loop.
+
+Before we deploy the SM to production using the above event loop, we would like
+to test it for all those tricky failure modes we mentioned before. In order to
+reuse as much code as possible with the "real" / "production" deployment, we'll
+use the same SM and event loop!
+
+How can we possibly reuse the same event loop you might be thinking? The key
+here is that the networking and timer wheel components of the event loop are
+implemeneted using interfaces.
+
+The interface for networking has a method for sending internal messages to other
+nodes and a method for sending responses to clients (note that we don't need a
+method for receiving because that's already done by the event loop and we can
+merely dequeue from the event queue to get the network events). The interface
+for time has a method to get the current time as well as setting the current
+time.
+
+Interfaces can have several implementations which we can "inject" at the start
+of the event loop. Hopefully the implementation for the "real" deployment should
+be clear enough (it's just what you'd expect using the real network and real
+clock). The "fake" / simulation deployment of the event loop has a more
+interesting implementation though, this is what it looks like:
 
   ![](../images/part5-simulation-event-loop.svg){ width=600px }
 
-- Given that all the fakes our components are state machines of type `Input ->
-  State -> (State, Output)`, we can "glue" them together to form a network of
-  components where the outputs of one component gets fed into the input of
-  another and so on. This is particularly effective for distributed systems
-  where we have N instances of the same component and they typically all talk to
-  each other;
+The first thing to notice is that in simulation we won't have actual clients
+making requests, instead there's a client generator component which will
+generate those on the fly instead.
 
-- Further note that since the networking part is already factored out of our
-  state machines, all we need to do is to write an event loop which does the
-  actual receiving and responding of messages and feeds it to the state
-  machines. The picture looks something like this:
+We didn't say this earlier, but the event queue is also an interface (with
+enqueue and dequeue methods) and during simulation we replace the FIFO queue
+with a priority queue sorted by event arrival time.
 
-  ![](../images/simulation-eventloop.svg)
+So the client generator generates not just a request but also an arrival time of
+that request and then enqueues the network event. It also appends it to the
+concurrent history, which will later be used for checking and debugging.
 
-  where client requests (synchronously) and internal messages from other nodes
-  in the network (potentially asynchronously) arrive at the event loop, get
-  queued up and then dispatched to the state machine running on the event loop.
-  After processing a message (the green arrow) the event loop updates the state
-  of the state machine and sends out any replies.
+In the "real" / "production" deployment we run one SM, which encodes the
+"business logic" of a data store, on top of a event loop per node in the
+network. In the simulation deployment we deploy all the SMs of the nodes on top
+of the same event loop, i.e. the whole distributed network will be run
+"locally", so the event loop needs to be able to dequeue events and hand them to
+the appropriate SM.
 
-- In order to reuse as much code as possible between real production deployment
-  and simulation testing we can parametrise the event loop by an interface that
-  does the delivering and sending of the network messages (the blue boxes in the
-  diagram), and merely swap those out depending on which mode of deployment we
-  want.
+Once the SM is stepped and we get its outputs, the "fake" send implementation of
+the network interface will generate arrival times and put them back on the
+priority queue, while the "fake" respond implementation will notify the client
+generator and append the response to the concurrent history.
 
-  For the real deployment send and deliver actually use the network to send and
-  deliver messages to clients or other nodes in the network, while in the
-  simulation testing deployment send generates a random (but deterministic via a
-  seed) arrival time and inserts the message in a priority queue sorted by time,
-  deliver pops the priority queue and steps the appropriate state machine with
-  the next message and inserts all the replies back to the queue, rinse and
-  repeat. Another difference between the real and simulation testing deployment
-  is that in the real case we want to run one node per event loop, while in
-  simulation we can run a whole network of nodes on one event loop.
+Note that since arrival times are randomly generated (deterministically using a
+seed) and because we got a priority queue rather than a FIFO we get interesting
+message interleavings where for example a message that was sent much later than
+some other message might end up getting receieved earlier.
 
-- Injecting faults can be done on the event loop level while simulation testing,
-  e.g. dropping random messages from the priority queue or introducing latency
-  by generating arrival times with a greater variance.
+Next lets have a look at time. The "fake" implementation of the time interface
+is completely detached from the actual system time, the clock is only advanced
+by explicit calls to the set time method. This allows us to do a key thing: set
+the time when we dequeue an event to the arrival time of that event! This allows
+us to jump in time to when we know that the next event is supposed to happen
+without waiting for it, i.e. no more waiting 30s for timeouts to happen!
 
-- During simulation testing the time is advanced upon delivering a message, e.g.
-  if an incoming message has arrival time T then we first advance the time of
-  the state machine to T and then feed it the message, by advancing the time we
-  might trigger various timeout and retries without actually having to wait 30s
-  (or whenever).
+Speaking of timeouts, lets have a look at how we can inject network faults which
+will eventually trigger "unhappy" code paths that eventually trigger timeouts.
+If we wanted to add a fault which randomly drops some messages we could
+implement yet another variant of the network interface where the send method
+simply doesn't enqueue some of the messages (effectively dropping them). We
+could similarly introduce high latency for some messages by generating arrival
+times with a greater variance.
+
+The simulation stops running when when we reach some predefined end time. At
+this point we got a concurrent history which contains both client requests and
+responses (i.e. the black-box traffic) as well as all internal messages between
+the nodes (i.e. the white-box traffic).
+
+Using the black-box history we can apply linearisability checking to test à la
+Jepsen, but faster and deterministically. While the white-box history can be used
+for assertions about the global state of the nodes in the network, e.g. check
+that no two nodes disagree about the content of the data store. We can also
+build a debugger that can step through the history and show how each SM evolves
+over time, making debugging more convenient.
+
+If the checkers find any problem, we want to be able to reproduce it from a
+single seed which the simulation event loop uses to generate arrival times, if
+messages should be dropped or not, etc. It's key that the simulation event loop
+is deterministic otherwise we can't do that.
 
 Code
 ----
@@ -286,7 +376,9 @@ Discussion
      restrictive?
 
   A: Yes, it's only by enforcing this structure on the application that we are
-     able to exploit it later in the testing phase.
+     able to exploit it later in the testing phase. For comparison, FoundationDB
+     had to implement their own programming
+     [language](https://apple.github.io/foundationdb/flow.html) to achieve this.
 
 - Q: What are the risks of simulation testing being wrong somehow?
 
@@ -479,6 +571,8 @@ Discussion
 Exercises
 ---------
 
+XXX: needs to be reviewed, leave debugger as exercise?
+
 0. Add a way to record all inputs during production deployment
 1. Add a way to produce a history from the recorded inputs
 2. Add a debugger that works on the history, similar to the REPL from the first
@@ -490,8 +584,8 @@ Exercises
    Liskov and James Cowling (2012);
 
 4. Compare and contrast with prior work:
-  - https://making.pusher.com/fuzz-testing-distributed-systems-with-quickcheck/
-  - https://fractalscapeblog.wordpress.com/2017/05/05/quickcheck-for-paxos/
+   - https://making.pusher.com/fuzz-testing-distributed-systems-with-quickcheck/
+   - https://fractalscapeblog.wordpress.com/2017/05/05/quickcheck-for-paxos/
 
 Problems
 --------
