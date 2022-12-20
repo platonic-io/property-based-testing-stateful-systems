@@ -42,17 +42,101 @@ the concurrent execution is correct.
 How it works
 ------------
 
-We can visualise a *concurrent history* of the execution of commands by several
-threads over time as follows.
+Let's first recall our counter example from last time:
+
+```haskell
+ > c <- newCounter
+ > incr c 1
+ > incr c 2
+ > get c
+ 3
+```
+
+When we interact with the counter sequentially, i.e. one command at the time,
+then it appears to count correctly.
+
+But if we instead concurrently issue the `incr`ements , we see something
+strange:
+
+```haskell
+ > forM_ [0..100000] $ \i -> do
+ >   c <- newCounter
+ >   concurrently_ (incr c 1) (incr c 2)
+ >   x <- get c
+ >   if x == 3 then return () else error ("i = " ++ show i ++ ", x = " ++ show x)
+ *** Exception: i = 29768, x = 1
+```
+
+After 29768 iterations we get back `1` rather than the expected `3`! The reason
+for this is because there's a race condition in the implementation of `incr`:
+
+```haskell
+ incr (Counter ref) i = do
+   j <- readIORef ref
+   writeIORef ref (i + j)
+```
+
+Because we first read the old value and _then_ write the new incremented value
+in an non-atomic way, it's possilbe that if two threads do this at the same time
+they overwrite each others increment. For example:
+
+```
+   thread 1, incr 1         |  thread 2, incr 2
+   -------------------------+------------------
+    0 <- readIORef ref      |
+                            | 0 <- readIORef ref
+                            | writeIORef ref (2 + 0)
+    writeIORef ref (1 + 0)  |
+                            |
+                            v
+                           time
+```
+
+If we read from the counter after the two increments are done we get `1` instead
+of the expected `3`. The fix to this problem is to do an atomic update using
+`atomicModifyIORef'`, instead of first reading and then writing to the `IORef`.
+
+The concurrent test that we just wrote is not only specific to the counter
+example but also only uses three fixed commands, the two concurrent `incr`ements
+followed by a `get`. While it was enough to find this race condition, in general
+we'd like to try arbitrary combinations of commands and possibly involving more
+than two threads.
+
+The key concept we need in order to accomplish that is that of *concurrent
+history*, which is perhaps easiest to explain in terms of a more familiar
+concept: a sequence diagram.
+
+Consider the following sequence diagram:
+
+![](../images/part2-sequence-diagram.svg){ width=400px }
+
+Here we see that the first and second thread concurrently increment, the first
+thread then reads the counter concurrently with the second thread's increment
+that's still going on. The second thread's increment finishes and a third thread
+does a read which is concurrent with the first thread's read.
+
+We can abstract away the arrows and merely focus on the intervals of the
+commands:
+
+![](../images/part2-history-from-sequence-diagram.svg){ width=500px }
+
+If we rotate the intervals we get the concurrent history:
 
 ![](../images/concurrent_counter.svg){ width=400px }
 
 Note that the execution of some commands overlap in time, this is what's meant
-by concurrent.
+by concurrent and arguebly it's easier to see the overlap here than in the
+original sequence diagram.
+
+We've also abstracted away the counter, it's a black box from the perspective of
+the threads. The only thing we know for sure is when we invoked the operation
+and when it returned, which is what our interval captures. We also know that the
+effect of the operation must have happend sometime within that interval.
 
 One such concurrent history can have different interleavings, depending on when
 exactly the effect of the commands happen. Here are two possible interleavings,
-where the red cross symbolises when the effect happened.
+where the red cross symbolises when the effect happened (i.e. when exactly the
+counter update its state).
 
 The first corresponds to the sequential history `< incr 1, get, incr 2, get >`:
 
@@ -516,7 +600,7 @@ Discussion
 Exercises
 ---------
 
-0. Consider a FIFO queue with the operations `E(x)` and `D => x` for enqueue `x`
+0. Consider a FIFO queue with the commands `E(x)` and `D => x` for enqueue `x`
    and dequeue `x`, which of the following histories linearise?
     a. ```
            thread 1: |--- E(x) -----|                 |-- D => y ---|
