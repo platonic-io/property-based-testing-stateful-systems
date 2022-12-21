@@ -5,7 +5,7 @@ Simulation testing
 
 *The code section needs to be turned from a bullet point presentation into a
  readable text. Before that can be done, we need the last pieces of code: the
- example and possibly the debugger. The exercises needs to be revisted as well.*
+ example and possibly the debugger. The exercises needs to be revisited as well.*
 
 Motivation
 ----------
@@ -104,7 +104,7 @@ responding to the client. In case the leader because unavailable, a new leader
 is elected. In case a node crashes, its state is restored after it restarts by
 the other nodes. That way as long as enough nodes are available and running we
 can keep serving client requests. We'll omit the exact details of how this is
-achieved or now, but hopefuly we've explained enough for it to be possilbe to
+achieved or now, but hopefully we've explained enough for it to be possible to
 appreciate that testing all possible corner cases related to those failure modes
 can be tricky.
 
@@ -142,7 +142,7 @@ from the node within 30s and reset the timer, then a timer wheel process will
 enqueue a timer event which the SM can use for doing the retry.
 
 By the way, all this extra stuff that happens outside of the SM is packaged up
-in a componenet called the event loop.
+in a component called the event loop.
 
 Before we deploy the SM to production using the above event loop, we would like
 to test it for all those tricky failure modes we mentioned before. In order to
@@ -151,7 +151,7 @@ use the same SM and event loop!
 
 How can we possibly reuse the same event loop you might be thinking? The key
 here is that the networking and timer wheel components of the event loop are
-implemeneted using interfaces.
+implemented using interfaces.
 
 The interface for networking has a method for sending internal messages to other
 nodes and a method for sending responses to clients (note that we don't need a
@@ -195,7 +195,7 @@ generator and append the response to the concurrent history.
 Note that since arrival times are randomly generated (deterministically using a
 seed) and because we got a priority queue rather than a FIFO we get interesting
 message interleavings where for example a message that was sent much later than
-some other message might end up getting receieved earlier.
+some other message might end up getting received earlier.
 
 Next lets have a look at time. The "fake" implementation of the time interface
 is completely detached from the actual system time, the clock is only advanced
@@ -232,7 +232,7 @@ is deterministic otherwise we can't do that.
 Code
 ----
 
-We'll link to the most important parts of the code rather than inlining it all
+We'll link to the most important parts of the code rather than in-lining it all
 here.
 
  <!---
@@ -297,7 +297,7 @@ event (priority) queue.
 > import Part05.Network ()
 > import Part05.ClientGenerator ()
 
-Timers are registerd by the state machines, and when they expire the event loop
+Timers are registered by the state machines, and when they expire the event loop
 creates a timer event for the SM that created it.
 
 This is the same for both production and simulation deployments. The only
@@ -370,13 +370,13 @@ Discussion
      two where bugs might sneak in, for example there could be something wrong
      in the implementation of the real network interface.
 
-     Another possilbe gap is that the faults we inject aren't realistic or
+     Another possible gap is that the faults we inject aren't realistic or
      complete. A good source for inspiration for faults is Deutsch's [fallacies
      of distributed
      computing](https://en.wikipedia.org/wiki/Fallacies_of_distributed_computing).
      Jepsen's list of
      [nemesis](https://github.com/jepsen-io/jepsen/blob/e7446a44c06bdc7996f989d1e8c39624c697c82a/jepsen/src/jepsen/nemesis/combined.clj#L507),
-     the Chaos engineering communties
+     the Chaos engineering community's
      [faults](https://medium.com/the-cloud-architect/chaos-engineering-part-3-61579e41edd8)
      and FoundationDB's simulator's
      [faults](https://apple.github.io/foundationdb/testing.html) are other good
@@ -446,7 +446,7 @@ Discussion
      [John Carmack](https://en.wikipedia.org/wiki/John_Carmack) wrote an
      interesting
      [.plan](https://raw.githubusercontent.com/ESWAT/john-carmack-plan-archive/master/by_day/johnc_plan_19981014.txt)
-     about recoding and replaying events in the context of testing in 1998, and
+     about recording and replaying events in the context of testing in 1998, and
      other
      [developers](http://ithare.com/testing-my-personal-take-on-testing-including-unit-testing-and-atddbdd/)
      in the the game industry are also advocating this technique.
@@ -474,7 +474,7 @@ Discussion
    > (such as networks, clocks, and disks). In Java we simply wrap these thin layers
    > in interfaces. In production, the code runs against implementations that use
    > real TCP/IP, DNS and other infrastructure. In the simworld, the implementations
-   > are based on in-memory implementa- tions that can be trivially created and torn
+   > are based on in-memory implementations that can be trivially created and torn
    > down. In turn, these in-memory implementations include rich fault-injection
    > APIs, which allow test implementors to specify simple statements like:
    > `net.partitionOff ( PARTITION_NAME , p5.getLocalAddress () ); ...
@@ -486,7 +486,7 @@ Discussion
    > capability in a distributed database is time, where the framework allows each
    > actor to have it’s own view of time arbitrarily controlled by the test.
    > Simworld tests can even add Byzantine conditions like data corruption, and
-   > operational properties like high la- tency. We highly recommend this testing
+   > operational properties like high latency. We highly recommend this testing
    > approach, and have continued to use it for new systems we build."
 
      [Dropbox](https://en.wikipedia.org/wiki/Dropbox) has written
@@ -520,11 +520,11 @@ Discussion
    > use the execution traces and to run the tests in a deterministic
    > way so that any failures are always reproducible.  The use of the
    > mini-protocol design pattern, the encoding of protocol interactions
-   > in session types and the use of a timing reproducable simulation has
+   > in session types and the use of a timing reproducible simulation has
    > yielded several advantages:
    >
    >   * Adding new protocols (for new functionality) with strong
-   >     assurance that they will not interact adversly with existing
+   >     assurance that they will not interact adversely with existing
    >     functionality and/or performance consistency.
    >
    >   * Consistent approaches (re-usable design approaches) to issues
@@ -532,12 +532,12 @@ Discussion
    >     timeouts / progress criteria.
    >
    >   * Performance consistent protocol layer abstraction /
-   >     subsitution: construct real world realistic timing for operation
+   >     substitution: construct real world realistic timing for operation
    >     without complexity of simulating all the underlying layer protocol
    >     complexity. This helps designs / development to maintain performance
    >     target awareness during development.
    >
-   >   * Consitent error propagation and mitigation (mini protocols to
+   >   * Consistent error propagation and mitigation (mini protocols to
    >     a peer live/die together) removing issues of resource lifetime
    >     management away from mini-protocol designers / implementors."
 
@@ -556,7 +556,7 @@ XXX: needs to be reviewed, leave debugger as exercise?
    part
 
 3. Write a checker that works on histories that ensures that the safety
-   properites from section 8 on correctness from [*Viewstamped Replication
+   properties from section 8 on correctness from [*Viewstamped Replication
    Revisited*](https://pmg.csail.mit.edu/papers/vr-revisited.pdf) by Barbara
    Liskov and James Cowling (2012);
 
