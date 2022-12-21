@@ -94,134 +94,88 @@ If the checkers find any problem, we want to be able to reproduce it from a sing
 
 ## Code
 
+We’ll link to the most important parts of the code rather than inlining it all here.
+
 <!---
 
 > module Part05SimulationTesting () where
 
 -->
 
--   Let’s start with the state machine (SM) type
--   A bit more complex what we’ve seen previously
-    -   input and output types are parameters so that applications with different message types can written
-    -   inputs are split into client requests (synchronous) and internal messages (asynchrous)
-    -   a step in the SM can returns several outputs, this is useful for broadcasting
-    -   outputs can also set and reset timers, which is necessary for implementing retry logic
-    -   when the timers expire the event loop will call the SM’s timeout handler (`smTimeout`)
-    -   in addition to the state we also thread through a seed, `StdGen`, so that the SM can generate random numbers
-    -   there’s also an initisation step (`smInit`) to set up the SM before it’s put to work
+Let’s start with the state machine (SM) type [itself](../src/Part05/StateMachine.hs):
 
 ``` haskell
 import Part05.StateMachine ()
 ```
 
--   In order to make it more ergonomic to write SMs we introduce a domain-specific language (DSL) for it
-
--   The DSL allows us to use do syntax, do `send`s or register timers anywhere rather than return a list outputs, as well as add pre-conditions via guards and do early returns
+-   In order to make it more ergonomic to write SMs we introduce a domain-specific [language](../Part05/StateMachineDSL.hs) (DSL) for it:
 
 ``` haskell
 import Part05.StateMachineDSL ()
 ```
 
--   The SMs are, as mentioned previously, parametrised by their input and output messages.
-
--   These parameters will most likely be instantiated with concrete (record-like) datatypes.
-
--   Network traffic from clients and other nodes in the network will come in as bytes though, so we need a way to decode inputs from bytes and a way to encode outputs as bytes.
-
--   `Codec`s are used to specify these convertions:
+The SMs are parametrised by their input and output messages, which will be instantiated with concrete (struct-like) datatypes. Network traffic from clients and other nodes will come in as bytes though, so we need [a way](../src/Part05/Codec.hs) to decode inputs from bytes and a way to encode outputs as bytes:
 
 ``` haskell
 import Part05.Codec ()
 ```
 
--   A SM together with its codec constitutes an application and it’s what’s expected from the user
--   Several SM and codec pairs together form a `Configuration`
--   The event loop expects a configuration at start up
+We have now seen everything we need from an application developer’s point of view in terms of what we need to deploy on top of the event loop: an SM and a codec for encoding and decoding inputs and outputs for the SM. We bundle these two things up in a so called [configuration](../src/Part05/Configuration.hs):
 
 ``` haskell
 import Part05.Configuration ()
 ```
 
--   We’ve covered what the user needs to provide in order to run an application on top of the event loop, next lets have a look at what the event loop provides
+Having covered what the user needs to provide in order to run an application on top of the event loop, next lets have a look at the event loop itself.
 
--   There are three types of events, network inputs (from client requests or from other nodes in the network), timer events (triggered when timers expire), and commands (think of this as admin commands that are sent directly to the event loop, currently there’s only a exit command which makes the event loop stop running)
+There are three types of [events](../src/Part05/Event.hs), network inputs (from client requests or from other nodes in the network), timer events (triggered when timers expire), and commands (think of this as admin commands that are sent directly to the event loop, currently there’s only a exit command which makes the event loop stop running):
 
 ``` haskell
 import Part05.Event ()
 ```
 
--   How are these events created? Depends on how the event loop is deployed: in production or simulation mode
+How are these events created? That depends on if the event loop is [deployed](../src/Part05/Deployment.hs) in production or simulation mode:
 
 ``` haskell
 import Part05.Deployment ()
 ```
 
--   network interface specifies how to send replies, and respond to clients
+The [network interface](../src/Part05/Network.hs) specifies how to send replies and respond to clients.
 
--   Network events in a production deployment are created when requests come in on http server
+In production mode the network interface also starts a HTTP server which generates network events as clients make requests or other nodes send messages.
 
-    -   Client request use POST
-
-    -   Internal messages use PUT
-
-    -   since client requests are synchronous, the http server puts the client request on the event queue and waits for the single threaded worker to create a response to the client request…
-
--   network events in a simulation deployment are created by the simulation itself, rather than from external requests
-
-    -   Agenda = priority queue of events
-
-    -   network interface:
-
-             { nSend    :: NodeId -> NodeId -> ByteString -> IO ()
-             , nRespond :: ClientId -> ByteString -> IO () }
+In simulation mode there’s no HTTP server, we instead generate client requests on demand using the [client generator](../src/Part05/ClientGenerator.hs). Client replies go directly to the client generator and sending of messages to other nodes don’t actually use the network either, but rather get enqueued to the event (priority) queue.
 
 ``` haskell
 import Part05.Network ()
-import Part05.AwaitingClients ()
-import Part05.Agenda ()
+import Part05.ClientGenerator ()
 ```
 
--   Timers are registerd by the state machines, and when they expire the event loop creates a timer event for the SM that created it
--   This is the same for both production and simulation deployments
--   The difference is that in production a real clock is used to check if the timer has expired, while in simulation time is advanced discretely when an event is popped from the event queue
+Timers are registerd by the state machines, and when they expire the event loop creates a timer event for the SM that created it.
+
+This is the same for both production and simulation deployments. The only difference is that in production a real clock is used to check if the timer has expired, while in simulation time is advanced discretely when an event is popped from the event queue.
 
 ``` haskell
 import Part05.TimerWheel ()
 ```
 
--   These events get queued up, and thus an order established, by the event loop
-    -   XXX: production
-    -   XXX: simulation
-    -   interface:
+Network and timer events get queued up in the [event queue](../src/Part05/EventQueue.hs) which also is an interface with different implementation depending on deployment mode.
 
-    <!-- -->
-
-        data EventQueue = EventQueue
-          { eqEnqueue :: Event -> IO ()
-          , eqDequeue :: DequeueTimeout -> IO Event
-          }
+In production the event queue is a FIFO queue, while in simulation it’s a [priority queue](../src/Part05/Agenda.hs) sorted by the event’s arrival time. In simulation mode we also append network events to our concurrent [history](../src/Part05/History.hs) which we later use for linearisability checking.
 
 ``` haskell
 import Part05.EventQueue ()
+import Part05.Agenda ()
+import Part05.History ()
 ```
 
--   Now we have all bits to implement the event loop itself
+Now we have all bits to implement the [event loop](../src/Part05/EventLoop.hs) itself!
 
 ``` haskell
 import Part05.EventLoop ()
 ```
 
--   Last bits needed for simulation testing: generate traffic, collect concurrent history, debug errors:
-
-``` haskell
-import Part05.ClientGenerator ()
-import Part05.History ()
-import Part05.Debug ()
-```
-
--   Finally lets put all this together and develop and simulation test [Viewstamped replication](https://dspace.mit.edu/handle/1721.1/71763) by Brian Oki, Barbra Liskov and James Cowling (2012)
-
-XXX: Viewstamp replication example…
+Finally lets put all this together and [develop and simulation test](../src/Part05/ViewstampReplication) [Viewstamped replication](https://dspace.mit.edu/handle/1721.1/71763) by Brian Oki, Barbra Liskov and James Cowling (2012):
 
 ## Discussion
 
