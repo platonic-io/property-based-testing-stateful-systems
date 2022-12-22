@@ -599,6 +599,9 @@ Problems
 See also
 --------
 
+- *Testing Distributed Systems w/ Deterministic Simulation* Will Wilson's
+   Strange Loop 2014 [talk](https://www.youtube.com/watch?v=4fFDFbi3toc) about
+   how FoundationDB is tested;
 - ["Jepsen-proof engineering"](https://sled.rs/simulation.html) is a blog post
   by Tyler Neely, the main author of the
   [`sled`](https://github.com/spacejam/sled) database, that argues that building

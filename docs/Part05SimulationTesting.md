@@ -280,6 +280,7 @@ XXX: needs to be reviewed, leave debugger as exercise?
 
 ## See also
 
+-   *Testing Distributed Systems w/ Deterministic Simulation* Will Wilson’s Strange Loop 2014 [talk](https://www.youtube.com/watch?v=4fFDFbi3toc) about how FoundationDB is tested;
 -   [“Jepsen-proof engineering”](https://sled.rs/simulation.html) is a blog post by Tyler Neely, the main author of the [`sled`](https://github.com/spacejam/sled) database, that argues that building a simulator gives you a massive advantage when building distributed systems;
 -   Most [blog posts](https://tigerbeetle.com/blog/) or [videos](https://www.youtube.com/@tigerbeetledb) about the TigerBeetle database at least at some point mention how their event loop is deterministic and how it allows them to do simulation testing;
 -   *Development and Deployment of Multiplayer Online Games, Vol. II: DIY, (Re)Actors, Client Arch., Unity/UE4/Lumberyard/Urho3D* by Sergey “‘No Bugs’ Hare” Ignatchenko (2020) is a book that advocates for using non-blocking and deterministic event loops as well as replay based testing (you don’t need to read Vol. I first);
