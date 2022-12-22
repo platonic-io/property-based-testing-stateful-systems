@@ -599,10 +599,28 @@ Problems
 See also
 --------
 
-- ["Jepsen-proof engineering"](https://sled.rs/simulation.html) by Tyler Neely;
-- The [P](https://github.com/p-org/P) programming language;
-- [Maelstrom](https://github.com/jepsen-io/maelstrom);
-- [stateright](https://github.com/stateright/stateright).
+- ["Jepsen-proof engineering"](https://sled.rs/simulation.html) is a blog post
+  by Tyler Neely, the main author of the
+  [`sled`](https://github.com/spacejam/sled) database, that argues that building
+  a simulator gives you a massive advantage when building distributed systems;
+- Most [blog posts](https://tigerbeetle.com/blog/) or
+  [videos](https://www.youtube.com/@tigerbeetledb) about the TigerBeetle
+  database at least at some point mention how their event loop is deterministic
+  and how it allows them to do simulation testing;
+- *Development and Deployment of Multiplayer Online Games, Vol. II: DIY,
+  (Re)Actors, Client Arch., Unity/UE4/Lumberyard/Urho3D* by Sergey "'No Bugs'
+  Hare" Ignatchenko (2020) is a book that advocates for using non-blocking and
+  deterministic event loops as well as replay based testing (you don't need to
+  read Vol. I first);
+- The [P](https://github.com/p-org/P) programming language is based on state
+  machines and has built-in support for model-checking;
+- [stateright](https://github.com/stateright/stateright) is a Rust actor library
+  with support for model- and linearisability checking;
+- [Maelstrom](https://github.com/jepsen-io/maelstrom) is a wrapper around Jepsen
+  to make it easier to develop toy implementations of distributed systems in any
+  programming language. It's not using simulation testing, but could still be
+  interesting as a source of inspiration especially around being language
+  agnostic.
 
 Summary
 -------
