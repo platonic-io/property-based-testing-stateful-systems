@@ -247,7 +247,7 @@ Let's start with the state machine (SM) type
 > import Part05.StateMachine ()
 
 * In order to make it more ergonomic to write SMs we introduce a domain-specific
-  [language](../Part05/StateMachineDSL.hs) (DSL) for it:
+  [language](../src/Part05/StateMachineDSL.hs) (DSL) for it:
 
 > import Part05.StateMachineDSL ()
 

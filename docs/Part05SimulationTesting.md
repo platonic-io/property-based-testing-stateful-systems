@@ -108,7 +108,7 @@ Let’s start with the state machine (SM) type [itself](../src/Part05/StateMachi
 import Part05.StateMachine ()
 ```
 
--   In order to make it more ergonomic to write SMs we introduce a domain-specific [language](../Part05/StateMachineDSL.hs) (DSL) for it:
+-   In order to make it more ergonomic to write SMs we introduce a domain-specific [language](../src/Part05/StateMachineDSL.hs) (DSL) for it:
 
 ``` haskell
 import Part05.StateMachineDSL ()
