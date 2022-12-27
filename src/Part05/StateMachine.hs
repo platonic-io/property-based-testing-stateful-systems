@@ -28,6 +28,22 @@ newtype TimerId = TimerId Int
 type SMStep state message response
   = state -> StdGen -> ([Output response message], state, StdGen)
 
+-- The state machine type is a bit more complex what we've seen previously:
+--
+--   * input and output types are parameters so that applications with different
+--     message types can written;
+--   * inputs are split into client requests (synchronous) and internal messages
+--     (asynchrous);
+--   * a step in the SM can returns several outputs, this is useful for
+--     broadcasting;
+--   * outputs can also set and reset timers, which is necessary for
+--     implementing retry logic;
+--   * when the timers expire the event loop will call the SM's timeout handler
+--     (`smTimeout`);
+--   * in addition to the state we also thread through a seed, `StdGen`, so that
+--     the SM can generate random numbers;
+--   * there's also an initisation step (`smInit`) to set up the SM before it's
+--     put to work.
 data SM state request message response = SM
   { smState   :: state
   , smInit    :: SMStep state message response

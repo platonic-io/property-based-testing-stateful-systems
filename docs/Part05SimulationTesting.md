@@ -2,7 +2,7 @@
 
 ![](../images/under_construction.gif)
 
-*The code section needs to be turned from a bullet point presentation into a readable text. Before that can be done, we need the last pieces of code: the example and possibly the debugger. The exercises needs to be revisted as well.*
+*The code section needs to be turned from a bullet point presentation into a readable text. Before that can be done, we need the last pieces of code: the example and possibly the debugger. The exercises needs to be revisited as well.*
 
 ## Motivation
 
@@ -40,7 +40,7 @@ For each client write there will be several internal messages between the nodes 
 
 <img src="../images/part5-data-store.svg" width="500" />
 
-How can this be achieved? One way would be for the distributed network to elect a leader node and have all client requests go through it, the leader would then replicate the data to all other nodes and confirm enough nodes got it before responding to the client. In case the leader because unavailable, a new leader is elected. In case a node crashes, its state is restored after it restarts by the other nodes. That way as long as enough nodes are available and running we can keep serving client requests. We’ll omit the exact details of how this is achieved or now, but hopefuly we’ve explained enough for it to be possilbe to appreciate that testing all possible corner cases related to those failure modes can be tricky.
+How can this be achieved? One way would be for the distributed network to elect a leader node and have all client requests go through it, the leader would then replicate the data to all other nodes and confirm enough nodes got it before responding to the client. In case the leader because unavailable, a new leader is elected. In case a node crashes, its state is restored after it restarts by the other nodes. That way as long as enough nodes are available and running we can keep serving client requests. We’ll omit the exact details of how this is achieved or now, but hopefully we’ve explained enough for it to be possible to appreciate that testing all possible corner cases related to those failure modes can be tricky.
 
 Next lets sketch how we can implement the data store nodes using state machines (SMs). First recall the type of our SMs:
 
@@ -58,11 +58,11 @@ How does the actual networking happen though? For the “real” / “production
 
 Sometimes when we send internal messages to other nodes they can be dropped by the network, in order to be able to implement retry logic we need to extend the basic functionality of SMs with some notion of being able to keep track of the passage of time. There are many ways to do this, for our particular application we’ll choose timers. The way timers work is that SMs can register a timer as part of their output. Typically we’d do something like: send such and such message to such and such node and set a timer for 30s, if we don’t hear back from the node within 30s and reset the timer, then a timer wheel process will enqueue a timer event which the SM can use for doing the retry.
 
-By the way, all this extra stuff that happens outside of the SM is packaged up in a componenet called the event loop.
+By the way, all this extra stuff that happens outside of the SM is packaged up in a component called the event loop.
 
 Before we deploy the SM to production using the above event loop, we would like to test it for all those tricky failure modes we mentioned before. In order to reuse as much code as possible with the “real” / “production” deployment, we’ll use the same SM and event loop!
 
-How can we possibly reuse the same event loop you might be thinking? The key here is that the networking and timer wheel components of the event loop are implemeneted using interfaces.
+How can we possibly reuse the same event loop you might be thinking? The key here is that the networking and timer wheel components of the event loop are implemented using interfaces.
 
 The interface for networking has a method for sending internal messages to other nodes and a method for sending responses to clients (note that we don’t need a method for receiving because that’s already done by the event loop and we can merely dequeue from the event queue to get the network events). The interface for time has a method to get the current time as well as setting the current time.
 
@@ -80,7 +80,7 @@ In the “real” / “production” deployment we run one SM, which encodes the
 
 Once the SM is stepped and we get its outputs, the “fake” send implementation of the network interface will generate arrival times and put them back on the priority queue, while the “fake” respond implementation will notify the client generator and append the response to the concurrent history.
 
-Note that since arrival times are randomly generated (deterministically using a seed) and because we got a priority queue rather than a FIFO we get interesting message interleavings where for example a message that was sent much later than some other message might end up getting receieved earlier.
+Note that since arrival times are randomly generated (deterministically using a seed) and because we got a priority queue rather than a FIFO we get interesting message interleavings where for example a message that was sent much later than some other message might end up getting received earlier.
 
 Next lets have a look at time. The “fake” implementation of the time interface is completely detached from the actual system time, the clock is only advanced by explicit calls to the set time method. This allows us to do a key thing: set the time when we dequeue an event to the arrival time of that event! This allows us to jump in time to when we know that the next event is supposed to happen without waiting for it, i.e. no more waiting 30s for timeouts to happen!
 
@@ -94,134 +94,88 @@ If the checkers find any problem, we want to be able to reproduce it from a sing
 
 ## Code
 
+We’ll link to the most important parts of the code rather than in-lining it all here.
+
 <!---
 
 > module Part05SimulationTesting () where
 
 -->
 
--   Let’s start with the state machine (SM) type
--   A bit more complex what we’ve seen previously
-    -   input and output types are parameters so that applications with different message types can written
-    -   inputs are split into client requests (synchronous) and internal messages (asynchrous)
-    -   a step in the SM can returns several outputs, this is useful for broadcasting
-    -   outputs can also set and reset timers, which is necessary for implementing retry logic
-    -   when the timers expire the event loop will call the SM’s timeout handler (`smTimeout`)
-    -   in addition to the state we also thread through a seed, `StdGen`, so that the SM can generate random numbers
-    -   there’s also an initisation step (`smInit`) to set up the SM before it’s put to work
+Let’s start with the state machine (SM) type [itself](../src/Part05/StateMachine.hs):
 
 ``` haskell
 import Part05.StateMachine ()
 ```
 
--   In order to make it more ergonomic to write SMs we introduce a domain-specific language (DSL) for it
-
--   The DSL allows us to use do syntax, do `send`s or register timers anywhere rather than return a list outputs, as well as add pre-conditions via guards and do early returns
+-   In order to make it more ergonomic to write SMs we introduce a domain-specific [language](../src/Part05/StateMachineDSL.hs) (DSL) for it:
 
 ``` haskell
 import Part05.StateMachineDSL ()
 ```
 
--   The SMs are, as mentioned previously, parametrised by their input and output messages.
-
--   These parameters will most likely be instantiated with concrete (record-like) datatypes.
-
--   Network traffic from clients and other nodes in the network will come in as bytes though, so we need a way to decode inputs from bytes and a way to encode outputs as bytes.
-
--   `Codec`s are used to specify these convertions:
+The SMs are parametrised by their input and output messages, which will be instantiated with concrete (struct-like) datatypes. Network traffic from clients and other nodes will come in as bytes though, so we need [a way](../src/Part05/Codec.hs) to decode inputs from bytes and a way to encode outputs as bytes:
 
 ``` haskell
 import Part05.Codec ()
 ```
 
--   A SM together with its codec constitutes an application and it’s what’s expected from the user
--   Several SM and codec pairs together form a `Configuration`
--   The event loop expects a configuration at start up
+We have now seen everything we need from an application developer’s point of view in terms of what we need to deploy on top of the event loop: an SM and a codec for encoding and decoding inputs and outputs for the SM. We bundle these two things up in a so called [configuration](../src/Part05/Configuration.hs):
 
 ``` haskell
 import Part05.Configuration ()
 ```
 
--   We’ve covered what the user needs to provide in order to run an application on top of the event loop, next lets have a look at what the event loop provides
+Having covered what the user needs to provide in order to run an application on top of the event loop, next lets have a look at the event loop itself.
 
--   There are three types of events, network inputs (from client requests or from other nodes in the network), timer events (triggered when timers expire), and commands (think of this as admin commands that are sent directly to the event loop, currently there’s only a exit command which makes the event loop stop running)
+There are three types of [events](../src/Part05/Event.hs), network inputs (from client requests or from other nodes in the network), timer events (triggered when timers expire), and commands (think of this as admin commands that are sent directly to the event loop, currently there’s only a exit command which makes the event loop stop running):
 
 ``` haskell
 import Part05.Event ()
 ```
 
--   How are these events created? Depends on how the event loop is deployed: in production or simulation mode
+How are these events created? That depends on if the event loop is [deployed](../src/Part05/Deployment.hs) in production or simulation mode:
 
 ``` haskell
 import Part05.Deployment ()
 ```
 
--   network interface specifies how to send replies, and respond to clients
+The [network interface](../src/Part05/Network.hs) specifies how to send replies and respond to clients.
 
--   Network events in a production deployment are created when requests come in on http server
+In production mode the network interface also starts a HTTP server which generates network events as clients make requests or other nodes send messages.
 
-    -   Client request use POST
-
-    -   Internal messages use PUT
-
-    -   since client requests are synchronous, the http server puts the client request on the event queue and waits for the single threaded worker to create a response to the client request…
-
--   network events in a simulation deployment are created by the simulation itself, rather than from external requests
-
-    -   Agenda = priority queue of events
-
-    -   network interface:
-
-             { nSend    :: NodeId -> NodeId -> ByteString -> IO ()
-             , nRespond :: ClientId -> ByteString -> IO () }
+In simulation mode there’s no HTTP server, we instead generate client requests on demand using the [client generator](../src/Part05/ClientGenerator.hs). Client replies go directly to the client generator and sending of messages to other nodes don’t actually use the network either, but rather get enqueued to the event (priority) queue.
 
 ``` haskell
 import Part05.Network ()
-import Part05.AwaitingClients ()
-import Part05.Agenda ()
+import Part05.ClientGenerator ()
 ```
 
--   Timers are registerd by the state machines, and when they expire the event loop creates a timer event for the SM that created it
--   This is the same for both production and simulation deployments
--   The difference is that in production a real clock is used to check if the timer has expired, while in simulation time is advanced discretely when an event is popped from the event queue
+Timers are registered by the state machines, and when they expire the event loop creates a timer event for the SM that created it.
+
+This is the same for both production and simulation deployments. The only difference is that in production a real clock is used to check if the timer has expired, while in simulation time is advanced discretely when an event is popped from the event queue.
 
 ``` haskell
 import Part05.TimerWheel ()
 ```
 
--   These events get queued up, and thus an order established, by the event loop
-    -   XXX: production
-    -   XXX: simulation
-    -   interface:
+Network and timer events get queued up in the [event queue](../src/Part05/EventQueue.hs) which also is an interface with different implementation depending on deployment mode.
 
-    <!-- -->
-
-        data EventQueue = EventQueue
-          { eqEnqueue :: Event -> IO ()
-          , eqDequeue :: DequeueTimeout -> IO Event
-          }
+In production the event queue is a FIFO queue, while in simulation it’s a [priority queue](../src/Part05/Agenda.hs) sorted by the event’s arrival time. In simulation mode we also append network events to our concurrent [history](../src/Part05/History.hs) which we later use for linearisability checking.
 
 ``` haskell
 import Part05.EventQueue ()
+import Part05.Agenda ()
+import Part05.History ()
 ```
 
--   Now we have all bits to implement the event loop itself
+Now we have all bits to implement the [event loop](../src/Part05/EventLoop.hs) itself!
 
 ``` haskell
 import Part05.EventLoop ()
 ```
 
--   Last bits needed for simulation testing: generate traffic, collect concurrent history, debug errors:
-
-``` haskell
-import Part05.ClientGenerator ()
-import Part05.History ()
-import Part05.Debug ()
-```
-
--   Finally lets put all this together and develop and simulation test [Viewstamped replication](https://dspace.mit.edu/handle/1721.1/71763) by Brian Oki, Barbra Liskov and James Cowling (2012)
-
-XXX: Viewstamp replication example…
+Finally lets put all this together and [develop and simulation test](../src/Part05/ViewstampReplication) [Viewstamped replication](https://dspace.mit.edu/handle/1721.1/71763) by Brian Oki, Barbra Liskov and James Cowling (2012):
 
 ## Discussion
 
@@ -241,7 +195,7 @@ XXX: Viewstamp replication example…
 
     Even though we tried to minimise difference between “production” and simulation testing deployment there’s always going to be a gap between the two where bugs might sneak in, for example there could be something wrong in the implementation of the real network interface.
 
-    Another possilbe gap is that the faults we inject aren’t realistic or complete. A good source for inspiration for faults is Deutsch’s [fallacies of distributed computing](https://en.wikipedia.org/wiki/Fallacies_of_distributed_computing). Jepsen’s list of [nemesis](https://github.com/jepsen-io/jepsen/blob/e7446a44c06bdc7996f989d1e8c39624c697c82a/jepsen/src/jepsen/nemesis/combined.clj#L507), the Chaos engineering communties [faults](https://medium.com/the-cloud-architect/chaos-engineering-part-3-61579e41edd8) and FoundationDB’s simulator’s [faults](https://apple.github.io/foundationdb/testing.html) are other good sources.
+    Another possible gap is that the faults we inject aren’t realistic or complete. A good source for inspiration for faults is Deutsch’s [fallacies of distributed computing](https://en.wikipedia.org/wiki/Fallacies_of_distributed_computing). Jepsen’s list of [nemesis](https://github.com/jepsen-io/jepsen/blob/e7446a44c06bdc7996f989d1e8c39624c697c82a/jepsen/src/jepsen/nemesis/combined.clj#L507), the Chaos engineering community’s [faults](https://medium.com/the-cloud-architect/chaos-engineering-part-3-61579e41edd8) and FoundationDB’s simulator’s [faults](https://apple.github.io/foundationdb/testing.html) are other good sources.
 
     The FoundationDB CTO was apparently worried about the simulator subconsciously training their programmers to beat it, see relevant part of Will Wilson’s [talk](https://youtu.be/4fFDFbi3toc?t=2164) for more on this topic.
 
@@ -265,15 +219,15 @@ XXX: Viewstamp replication example…
 
     There’s also the more established practice of [discrete-event simulation](https://en.wikipedia.org/wiki/Discrete-event_simulation) which is usually used in different contexts than software testing, but nevertheless is close enough in principle that it’s worth taking inspiration from (and indeed the simulation testing people often refer to it).
 
-    [John Carmack](https://en.wikipedia.org/wiki/John_Carmack) wrote an interesting [.plan](https://raw.githubusercontent.com/ESWAT/john-carmack-plan-archive/master/by_day/johnc_plan_19981014.txt) about recoding and replaying events in the context of testing in 1998, and other [developers](http://ithare.com/testing-my-personal-take-on-testing-including-unit-testing-and-atddbdd/) in the the game industry are also advocating this technique.
+    [John Carmack](https://en.wikipedia.org/wiki/John_Carmack) wrote an interesting [.plan](https://raw.githubusercontent.com/ESWAT/john-carmack-plan-archive/master/by_day/johnc_plan_19981014.txt) about recording and replaying events in the context of testing in 1998, and other [developers](http://ithare.com/testing-my-personal-take-on-testing-including-unit-testing-and-atddbdd/) in the the game industry are also advocating this technique.
 
     Three Amazon Web Services (AWS) engineers recently published a paper called [Millions of Tiny Databases](https://www.usenix.org/conference/nsdi20/presentation/brooker) (2020) where they say:
 
     > “To solve this problem \[testing distributed systems\], we picked an approach that is in wide use at Amazon Web Services, which we would like to see broadly adopted: build a test harness which abstracts networking, performance, and other systems concepts (we call it a simworld). The goal of this approach is to allow developers to write distributed systems tests, including tests that simulate packet loss, server failures, corruption, and other failure cases, as unit tests in the same language as the system itself. In this case, these unit tests run inside the developer’s IDE (or with junit at build time), with no need for test clusters or other infrastructure. A typical test which tests correctness under packet loss can be implemented in less than 10 lines of Java code, and executes in less than 100ms. The Physalia team have written hundreds of such tests, far exceeding the coverage that would be practical in any cluster-based or container-based approach.
     >
-    > The key to building a simworld is to build code against abstract physical layers (such as networks, clocks, and disks). In Java we simply wrap these thin layers in interfaces. In production, the code runs against implementations that use real TCP/IP, DNS and other infrastructure. In the simworld, the implementations are based on in-memory implementa- tions that can be trivially created and torn down. In turn, these in-memory implementations include rich fault-injection APIs, which allow test implementors to specify simple statements like: `net.partitionOff ( PARTITION_NAME , p5.getLocalAddress () ); ... net.healPartition ( PARTITION_NAME );`
+    > The key to building a simworld is to build code against abstract physical layers (such as networks, clocks, and disks). In Java we simply wrap these thin layers in interfaces. In production, the code runs against implementations that use real TCP/IP, DNS and other infrastructure. In the simworld, the implementations are based on in-memory implementations that can be trivially created and torn down. In turn, these in-memory implementations include rich fault-injection APIs, which allow test implementors to specify simple statements like: `net.partitionOff ( PARTITION_NAME , p5.getLocalAddress () ); ... net.healPartition ( PARTITION_NAME );`
     >
-    > Our implementation allows control down to the packet level, allowing testers to delay, duplicate or drop packets based on matching criteria. Similar capabilities are available to test disk IO. Perhaps the most important testing capability in a distributed database is time, where the framework allows each actor to have it’s own view of time arbitrarily controlled by the test. Simworld tests can even add Byzantine conditions like data corruption, and operational properties like high la- tency. We highly recommend this testing approach, and have continued to use it for new systems we build.”
+    > Our implementation allows control down to the packet level, allowing testers to delay, duplicate or drop packets based on matching criteria. Similar capabilities are available to test disk IO. Perhaps the most important testing capability in a distributed database is time, where the framework allows each actor to have it’s own view of time arbitrarily controlled by the test. Simworld tests can even add Byzantine conditions like data corruption, and operational properties like high latency. We highly recommend this testing approach, and have continued to use it for new systems we build.”
 
     [Dropbox](https://en.wikipedia.org/wiki/Dropbox) has written [several](https://dropbox.tech/infrastructure/rewriting-the-heart-of-our-sync-engine) [blog](https://lobste.rs/s/ob6a8z/rewriting_heart_our_sync_engine) [posts](https://dropbox.tech/infrastructure/-testing-our-new-sync-engine) related to simulation testing.
 
@@ -283,15 +237,15 @@ XXX: Viewstamp replication example…
 
     > “Both the network and consensus layers must make significant use of concurrency which is notoriously hard to get right and to test. We use Software Transactional Memory (STM) to manage the internal state of a node. While STM makes it much easier to write correct concurrent code, it is of course still possible to get wrong, which leads to intermittent failures that are hard to reproduce and debug.
     >
-    > In order to reliably test our code for such concurrency bugs, we wrote a simulator that can execute the concurrent code with both timing determinism and giving global observability, producing execution traces. This enables us to write property tests that can use the execution traces and to run the tests in a deterministic way so that any failures are always reproducible. The use of the mini-protocol design pattern, the encoding of protocol interactions in session types and the use of a timing reproducable simulation has yielded several advantages:
+    > In order to reliably test our code for such concurrency bugs, we wrote a simulator that can execute the concurrent code with both timing determinism and giving global observability, producing execution traces. This enables us to write property tests that can use the execution traces and to run the tests in a deterministic way so that any failures are always reproducible. The use of the mini-protocol design pattern, the encoding of protocol interactions in session types and the use of a timing reproducible simulation has yielded several advantages:
     >
-    > -   Adding new protocols (for new functionality) with strong assurance that they will not interact adversly with existing functionality and/or performance consistency.
+    > -   Adding new protocols (for new functionality) with strong assurance that they will not interact adversely with existing functionality and/or performance consistency.
     >
     > -   Consistent approaches (re-usable design approaches) to issues of latency hiding, intra mini-protocol flow control and timeouts / progress criteria.
     >
-    > -   Performance consistent protocol layer abstraction / subsitution: construct real world realistic timing for operation without complexity of simulating all the underlying layer protocol complexity. This helps designs / development to maintain performance target awareness during development.
+    > -   Performance consistent protocol layer abstraction / substitution: construct real world realistic timing for operation without complexity of simulating all the underlying layer protocol complexity. This helps designs / development to maintain performance target awareness during development.
     >
-    > -   Consitent error propagation and mitigation (mini protocols to a peer live/die together) removing issues of resource lifetime management away from mini-protocol designers / implementors.”
+    > -   Consistent error propagation and mitigation (mini protocols to a peer live/die together) removing issues of resource lifetime management away from mini-protocol designers / implementors.”
 
     The simulation code is open source and can be found [here](https://github.com/input-output-hk/io-sim).
 
@@ -305,7 +259,7 @@ XXX: needs to be reviewed, leave debugger as exercise?
 
 2.  Add a debugger that works on the history, similar to the REPL from the first part
 
-3.  Write a checker that works on histories that ensures that the safety properites from section 8 on correctness from [*Viewstamped Replication Revisited*](https://pmg.csail.mit.edu/papers/vr-revisited.pdf) by Barbara Liskov and James Cowling (2012);
+3.  Write a checker that works on histories that ensures that the safety properties from section 8 on correctness from [*Viewstamped Replication Revisited*](https://pmg.csail.mit.edu/papers/vr-revisited.pdf) by Barbara Liskov and James Cowling (2012);
 
 4.  Compare and contrast with prior work:
 
@@ -326,10 +280,13 @@ XXX: needs to be reviewed, leave debugger as exercise?
 
 ## See also
 
--   [“Jepsen-proof engineering”](https://sled.rs/simulation.html) by Tyler Neely;
--   The [P](https://github.com/p-org/P) programming language;
--   [Maelstrom](https://github.com/jepsen-io/maelstrom);
--   [stateright](https://github.com/stateright/stateright).
+-   *Testing Distributed Systems w/ Deterministic Simulation* Will Wilson’s Strange Loop 2014 [talk](https://www.youtube.com/watch?v=4fFDFbi3toc) about how FoundationDB is tested;
+-   [“Jepsen-proof engineering”](https://sled.rs/simulation.html) is a blog post by Tyler Neely, the main author of the [`sled`](https://github.com/spacejam/sled) database, that argues that building a simulator gives you a massive advantage when building distributed systems;
+-   Most [blog posts](https://tigerbeetle.com/blog/) or [videos](https://www.youtube.com/@tigerbeetledb) about the TigerBeetle database at least at some point mention how their event loop is deterministic and how it allows them to do simulation testing;
+-   *Development and Deployment of Multiplayer Online Games, Vol. II: DIY, (Re)Actors, Client Arch., Unity/UE4/Lumberyard/Urho3D* by Sergey “‘No Bugs’ Hare” Ignatchenko (2020) is a book that advocates for using non-blocking and deterministic event loops as well as replay based testing (you don’t need to read Vol. I first);
+-   The [P](https://github.com/p-org/P) programming language is based on state machines and has built-in support for model-checking;
+-   [stateright](https://github.com/stateright/stateright) is a Rust actor library with support for model- and linearisability checking;
+-   [Maelstrom](https://github.com/jepsen-io/maelstrom) is a wrapper around Jepsen to make it easier to develop toy implementations of distributed systems in any programming language. It’s not using simulation testing, but could still be interesting as a source of inspiration especially around being language agnostic.
 
 ## Summary
 

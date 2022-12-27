@@ -21,6 +21,9 @@ import Part05.Time
 
 ------------------------------------------------------------------------
 
+-- The DSL allows us to use do syntax, do `send`s or register timers anywhere
+-- rather than return a list outputs, as well as add pre-conditions via guards
+-- and do early returns.
 type SMM s msg resp a =
   ContT Guard (StateT s (StateT StdGen (Writer [Output resp msg]))) a
 

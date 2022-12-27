@@ -17,7 +17,7 @@ license:            MIT
 license-file:       LICENSE
 author:             Stevan Andjelkovic and Daniel Gustafsson
 maintainer:         symbiont-stevan-andjelkovic@users.noreply.github.com
-copyright:          Copyright (c) 2022 Symbiont Inc.
+copyright:          Copyright (c) 2022-2023 Symbiont Inc.
 category:           Testing
 extra-source-files:
   CHANGELOG.md
@@ -84,6 +84,7 @@ library
     Part05.EventLoop
     Part05.EventQueue
     Part05.History
+    Part05.LibMain
     Part05.Network
     Part05.Options
     Part05.Random
@@ -120,12 +121,6 @@ library
 
 executable part5
   main-is:          Main.hs
-
-  -- Modules included in this executable, other than Main.
-  -- other-modules:
-
-  -- LANGUAGE extensions used by modules in this package.
-  -- other-extensions:
   build-depends:
     , base
     , property-based-testing-stateful-systems
