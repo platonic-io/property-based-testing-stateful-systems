@@ -84,6 +84,7 @@ library
     Part05.EventLoop
     Part05.EventQueue
     Part05.History
+    Part05.LibMain
     Part05.Network
     Part05.Options
     Part05.Random
